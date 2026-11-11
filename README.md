@@ -140,6 +140,16 @@ hexrows(cells, aes(fill = tissue), queries = q)
 tagged with its group and cell count. Without `by`, it picks the n most
 expanded clones overall.
 
+### Gene-usage logos
+
+`hexrows(..., gene_logos = TRUE)` adds V and J gene logos on the two lower
+edges of every frame: alpha on the lower-left edge (TRAV stack, then TRAJ),
+beta on the lower-right (TRBV, then TRBJ). V and J are counted independently.
+Each gene is one word, sized by its share of the bin's clones. Only genes with
+≥10% are drawn, at most 4 per stack (`gene_min_freq`, `gene_max`). J genes come
+from the readers (10x `j_gene`, AIRR `j_call`, scRepertoire `CTgene`), or from
+`map = c(ja = ..., jb = ...)` in `cells_from_df()`.
+
 ### Cumulative bins
 
 `hexrows(..., cumulative = TRUE)` makes each frame hold every clone up to its

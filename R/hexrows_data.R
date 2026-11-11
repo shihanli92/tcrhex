@@ -54,6 +54,14 @@
 #'   aesthetics are then evaluated on its (already per-clone) columns.
 #' @param unit_in Inches per hexagon unit, used to place the text (as by
 #'   [ggsave_hexrows()]).
+#' @param gene_logos If `TRUE`, draw gene-usage logos on the two lower edges
+#'   of each frame: alpha on the lower-left edge (TRAV stack on its first half,
+#'   TRAJ on its second), beta on the lower-right (TRBV, then TRBJ). V and J
+#'   are counted independently; each gene is one word, its height proportional
+#'   to its share of the bin's clones, most frequent nearest the frame. Without
+#'   J genes in the input, V spans the whole edge. See [gene_words()].
+#' @param gene_min_freq,gene_max Gene logos show genes with at least this
+#'   share of the bin's clones, at most `gene_max` per stack.
 #' @param cumulative If `TRUE`, bin k holds every clone with `d` up to the
 #'   bin's upper edge (bin 0: `d == 0`; then `d <= 12`, `d <= 24`, ...), so
 #'   the hexagon composition, the largest-remainder split, the count and the
@@ -79,7 +87,8 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
                          logo_font = NULL, summarise_fill = summarise_unique,
                          fold_levels = 8, dominant = 0.10, row_tag = NULL,
                          clones = NULL, hits = NULL, unit_in = 0.072,
-                         organism = NULL, cumulative = FALSE) {
+                         organism = NULL, cumulative = FALSE, gene_logos = FALSE,
+                         gene_min_freq = 0.1, gene_max = 4) {
   organism <- organism %||% attr(queries, "organism") %||% attr(hits, "organism") %||% "human"
   organism <- match.arg(organism, c("human", "mouse"))
   if (is.null(cells)) {
@@ -161,7 +170,8 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
   nr <- nrow(q)
   logo_out <- (.hx$logo_offset + .hx$logo_height)
   px <- 2 * Hmax * c30 + if (logos) 2 * logo_out * 0.5 + 1.6 else 2.2
-  py <- 2 * Hmax + if (logos) logo_out * c30 + 2.2 else 2.2
+  py <- 2 * Hmax + (if (logos) logo_out * c30 + 2.2 else 2.2) +
+    (if (gene_logos) logo_out * c30 else 0)
   grid <- expand.grid(.bin = bl$bin, .row = seq_len(nr))
   grid$cx <- grid$.bin * px
   grid$cy <- -(grid$.row - 1) * py
@@ -200,10 +210,11 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
 
   # logos
   logo_df <- NULL
-  if (logos) {
-    gl <- .glyphs(logo_font)
+  if (logos || gene_logos) {
+    gl <- if (logos) .glyphs(logo_font) else NULL
+    wg <- if (gene_logos) .word_glyphs() else NULL
     ne <- grid[grid$n_all > 0, ]
-    out <- vector("list", nrow(ne) * 2)
+    out <- vector("list", nrow(ne) * 6)
     k <- 0
     for (i in seq_len(nrow(ne))) {
       hb <- hits[hits$.row == ne$.row[i] & hits$.bin == ne$.bin[i], ]
@@ -213,7 +224,32 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
       apex <- c(cx, cy + H)
       lu <- c(cx - H * c30, cy + H / 2)
       ru <- c(cx + H * c30, cy + H / 2)
-      for (ch in c("a", "b")) {
+      if (gene_logos) {
+        ll <- c(cx - H * c30, cy - H / 2)
+        bot <- c(cx, cy - H)
+        lr <- c(cx + H * c30, cy - H / 2)
+        for (ch in c("a", "b")) {
+          ends <- if (ch == "a") list(ll, bot) else list(bot, lr)
+          jg <- hb[[paste0("j", ch)]]
+          has_j <- !is.null(jg) && any(!is.na(jg))
+          # V and J counted independently: V on the first half of the edge, J on the second
+          parts <- list(list(genes = hb[[paste0("v", ch)]], from = 0, to = if (has_j) 0.5 else 1,
+                             tag = "v"))
+          if (has_j) parts[[2]] <- list(genes = jg, from = 0.5, to = 1, tag = "j")
+          for (pt in parts) {
+            wd <- gene_words(pt$genes, gene_min_freq, gene_max)
+            p <- .word_logo_polys(wd, ends[[1]], ends[[2]], .hx$logo_offset, .hx$logo_height,
+                                  glyphs = wg, from = pt$from, to = pt$to)
+            if (is.null(p) || !nrow(p)) next
+            k <- k + 1
+            p$row <- ne$.row[i]
+            p$bin <- ne$.bin[i]
+            p$chain <- paste0(pt$tag, ch, "_genes")
+            out[[k]] <- p
+          }
+        }
+      }
+      for (ch in if (logos) c("a", "b") else character()) {
         fr <- logo_freqs(logo_align(hb[[paste0("c", ch)]], logo_trim))
         p <- if (ch == "a") .logo_polys(fr, lu, apex, .hx$logo_offset, .hx$logo_height, glyphs = gl)
              else .logo_polys(fr, apex, ru, .hx$logo_offset, .hx$logo_height, glyphs = gl)
@@ -235,9 +271,12 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
   }
 
   # counts
+  # with gene logos on the lower edges, the count moves beside the right edge
   counts <- tibble::tibble(row = grid$.row, bin = grid$.bin,
-                           x = grid$cx + grid$H * c30 * 0.92,
-                           y = grid$cy - grid$H * 0.62, label = as.character(grid$n_all),
+                           x = grid$cx + grid$H * c30 * (if (gene_logos) 1 else 0.92) +
+                             (if (gene_logos) 0.35 else 0),
+                           y = grid$cy - grid$H * (if (gene_logos) 0.12 else 0.62),
+                           label = as.character(grid$n_all),
                            colour = ifelse(grid$n_all > grid$n_shown, .hx$ink2, .hx$muted))
 
   # row lines
@@ -293,7 +332,8 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
   labels <- dplyr::bind_rows(lab_left, lab_right, header)
 
   xlim <- c(x_left - 1, x_right + right_w + 1)
-  ylim <- c(-(nr - 1) * py - Hmax - 2.2, y_head + lh(.hx$size_header) * 2.2)
+  ylim <- c(-(nr - 1) * py - Hmax - 2.2 - (if (gene_logos) logo_out * c30 else 0),
+            y_head + lh(.hx$size_header) * 2.2)
   levels_tab <- dplyr::count(hits_all, level = .data$.level, name = "clones", .drop = FALSE)
   pat_tab <- if (is.null(plv)) NULL else dplyr::count(hits_all, level = .data$.pattern,
                                                        name = "clones", .drop = FALSE)
@@ -313,7 +353,8 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
     meta = list(Hmax = Hmax, px = px, py = py, xlim = xlim, ylim = ylim, unit_in = unit_in,
                 radius = radius, bin_width = bin_width, max_hex = max_hex, logos = logos,
                 logo_trim = logo_trim, n_rows = nr, n_bins = nb,
-                cumulative = isTRUE(cumulative),
+                cumulative = isTRUE(cumulative), gene_logos = isTRUE(gene_logos),
+                gene_min_freq = gene_min_freq,
                 fill_label = if (is.null(fill_q)) NULL else rlang::as_label(fill_q),
                 pattern_label = if (is.null(pat_q)) NULL else rlang::as_label(pat_q),
                 folded = lv$folded, fill_is_factor = lv$is_factor)),

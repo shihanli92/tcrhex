@@ -39,14 +39,16 @@ hexrows <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius = 10
                     logo_font = NULL, summarise_fill = summarise_unique,
                     fold_levels = 8, dominant = 0.10, row_tag = NULL,
                     clones = NULL, hits = NULL, title = NULL, subtitle = NULL,
-                    unit_in = 0.072, organism = NULL, cumulative = FALSE) {
+                    unit_in = 0.072, organism = NULL, cumulative = FALSE,
+                    gene_logos = FALSE, gene_min_freq = 0.1, gene_max = 4) {
   hd <- hexrows_data(cells, mapping, queries = queries, radius = radius,
                      bin_width = bin_width, max_hex = max_hex, logos = logos,
                      logo_trim = logo_trim, logo_font = logo_font,
                      summarise_fill = summarise_fill, fold_levels = fold_levels,
                      dominant = dominant, row_tag = row_tag, clones = clones,
                      hits = hits, unit_in = unit_in, organism = organism,
-                     cumulative = cumulative)
+                     cumulative = cumulative, gene_logos = gene_logos,
+                     gene_min_freq = gene_min_freq, gene_max = gene_max)
   hexrows_plot(hd, title = title, subtitle = subtitle)
 }
 
@@ -163,7 +165,10 @@ theme_hexrows <- function(base_size = 8) {
     "Logos: CDR3\u03b1 (upper-left edge) and CDR3\u03b2 (upper-right edge) of the bin's clones, ",
     "%d residue%s trimmed at each end, aligned to the modal length."),
     m$logo_trim, if (m$logo_trim == 1) "" else "s") else NULL
-  paste(c(s1, paste(c(s2, s3), collapse = " ")), collapse = "\n")
+  s4 <- if (isTRUE(m$gene_logos)) sprintf(paste0(
+    "Lower edges: TRAV then TRAJ (left), TRBV then TRBJ (right), genes in \u2265%s%% of ",
+    "the bin's clones."), round(100 * m$gene_min_freq)) else NULL
+  paste(c(s1, paste(c(s2, s3, s4), collapse = " ")), collapse = "\n")
 }
 
 # Environment holding the default discrete fill / pattern scales for this

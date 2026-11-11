@@ -42,7 +42,9 @@ summarise_most_common <- function(values) {
 #' @param summarise Function applied to the values of every metadata column
 #'   within a clone; must return one value.
 #' @return A tibble with `.clone_id`, `donor`, `va`, `ca`, `vb`, `cb`,
-#'   `cells`, then the summarised metadata columns.
+#'   `cells`, then the summarised metadata columns. J genes (`ja`, `jb`), if
+#'   present, are summarised by their most common value (a clone is defined
+#'   by V + CDR3, so its cells may rarely differ in J).
 #' @export
 #' @examples
 #' cells <- tcrhex_example_cells()
@@ -61,9 +63,25 @@ tcr_clones <- function(cells, summarise = summarise_unique) {
                         va = p$va[first], ca = p$ca[first], vb = p$vb[first],
                         cb = p$cb[first], cells = tabulate(g, ng))
   meta <- setdiff(names(p), c(.tcr_cols))
-  for (m in meta) out[[m]] <- .summarise_col(p[[m]], g, ng, first, summarise)
+  for (m in meta) {
+    out[[m]] <- if (m %in% c("ja", "jb")) .most_common_by(p[[m]], g, ng) else
+      .summarise_col(p[[m]], g, ng, first, summarise)
+  }
   attr(out, "cell_clone") <- tibble::tibble(cell = p$cell, .clone_id = g)
   class(out) <- c("tcrhex_clones", setdiff(class(out), "tcrhex_clones"))
+  out
+}
+
+# Most common non-NA value per group (ties alphabetical), vectorised; used for
+# the J genes, which may differ between cells of one V + CDR3 clone.
+.most_common_by <- function(x, g, ng) {
+  ok <- !is.na(x)
+  out <- rep(NA_character_, ng)
+  if (!any(ok)) return(out)
+  t <- dplyr::count(tibble::tibble(g = g[ok], x = as.character(x[ok])), .data$g, .data$x)
+  t <- t[order(t$g, -t$n, t$x, method = "radix"), ]
+  t <- t[!duplicated(t$g), ]
+  out[t$g] <- t$x
   out
 }
 
@@ -157,6 +175,14 @@ tcrhex_example_cells <- function(n_donors = 6, seed = 1) {
                         hla = rep_len(c("A*02:01;A*24:02;B*08:01", "A*01:01;A*02:01;B*07:02",
                                         "A*03:01;A*11:01;B*35:01", NA), n_donors))
     df <- merge(df, dinfo, by = "donor")
-    cells_from_df(df, verbose = FALSE)
+    # synthetic J genes: mostly the motif's J, sometimes another
+    jmap_a <- c("TRAV12-2" = "TRAJ42", "TRAV27" = "TRAJ42", "TRAV21" = "TRAJ33")
+    jmap_b <- c("TRBV19" = "TRBJ2-7", "TRBV6-5" = "TRBJ2-7", "TRBV20-1" = "TRBJ1-2")
+    df$ja <- ifelse(stats::runif(nrow(df)) < 0.8, jmap_a[df$va],
+                    sample(c("TRAJ9", "TRAJ49", "TRAJ53"), nrow(df), TRUE))
+    df$jb <- ifelse(stats::runif(nrow(df)) < 0.8, jmap_b[df$vb],
+                    sample(c("TRBJ1-1", "TRBJ2-1", "TRBJ2-3"), nrow(df), TRUE))
+    cells_from_df(df, map = c(cell = "cell", donor = "donor", va = "va", ca = "ca", vb = "vb",
+                              cb = "cb", ja = "ja", jb = "jb"), verbose = FALSE)
   })
 }

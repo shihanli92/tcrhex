@@ -31,7 +31,8 @@ e.g. \code{tissue = ifelse(grepl("B$", sample), "blood", "lung")}.}
 \value{
 A cell table (tibble of class \code{tcrhex_cells}): one row per cell with
 at least one productive TRA or TRB chain, columns \code{cell}, \code{donor}, \code{va},
-\code{ca}, \code{vb}, \code{cb} and all metadata columns.
+\code{ca}, \code{vb}, \code{cb}, the J genes \code{ja}, \code{jb} when the input has them, and all
+metadata columns.
 }
 \description{
 Reads one or several 10x Cell Ranger \code{filtered_contig_annotations.csv} files

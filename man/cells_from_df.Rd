@@ -15,7 +15,8 @@ cells_from_df(
 \item{df}{Data frame, one row per cell.}
 
 \item{map}{Named character vector \code{c(internal = "column in df")} for
-\code{cell}, \code{donor}, \code{va}, \code{ca}, \code{vb}, \code{cb}. Names not given default to
+\code{cell}, \code{donor}, \code{va}, \code{ca}, \code{vb}, \code{cb}, and optionally the J genes \code{ja},
+\code{jb} (used by \code{hexrows(gene_logos = TRUE)}). Names not given default to
 themselves; \code{cell} defaults to the row number if absent.}
 
 \item{...}{Further metadata columns to create, as in \code{\link[dplyr:mutate]{dplyr::mutate()}},
@@ -26,7 +27,8 @@ e.g. \code{tissue = ifelse(grepl("B$", sample), "blood", "lung")}.}
 \value{
 A cell table (tibble of class \code{tcrhex_cells}): one row per cell with
 at least one productive TRA or TRB chain, columns \code{cell}, \code{donor}, \code{va},
-\code{ca}, \code{vb}, \code{cb} and all metadata columns.
+\code{ca}, \code{vb}, \code{cb}, the J genes \code{ja}, \code{jb} when the input has them, and all
+metadata columns.
 }
 \description{
 The generic reader: maps columns of \code{df} (one row per cell, one TRA and one

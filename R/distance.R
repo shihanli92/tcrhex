@@ -74,7 +74,7 @@ tcrdist_paired <- function(queries, clones, radius = 108, organism = c("human", 
                                d = d[keep], d_a = d_a[keep], d_b = d_b[keep])
   }
   hits <- dplyr::bind_rows(out)
-  info <- clones[, intersect(c(".clone_id", "donor", "va", "ca", "vb", "cb", "cells"),
+  info <- clones[, intersect(c(".clone_id", "donor", "va", "ca", "vb", "cb", "ja", "jb", "cells"),
                              names(clones)), drop = FALSE]
   hits <- dplyr::left_join(hits, info, by = ".clone_id")
   attr(hits, "radius") <- radius

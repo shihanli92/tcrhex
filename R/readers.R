@@ -31,7 +31,8 @@
 #' @param verbose Print the summary.
 #' @return A cell table (tibble of class `tcrhex_cells`): one row per cell with
 #'   at least one productive TRA or TRB chain, columns `cell`, `donor`, `va`,
-#'   `ca`, `vb`, `cb` and all metadata columns.
+#'   `ca`, `vb`, `cb`, the J genes `ja`, `jb` when the input has them, and all
+#'   metadata columns.
 #' @seealso [read_10x_contigs()], [read_airr()], [cells_from_df()]
 #' @export
 #' @examples
@@ -51,24 +52,29 @@ read_screpertoire <- function(x, donor, ..., verbose = TRUE) {
   g <- .split2(df$CTgene)
   a <- .split2(df$CTaa)
   stats <- list(input = nrow(df))
-  pick <- function(genes, aas, locus) {
+  pick <- function(genes, aas, locus, jpos) {
     gl <- strsplit(ifelse(is.na(genes), "NA", genes), ";", fixed = TRUE)
     al <- strsplit(ifelse(is.na(aas), "NA", aas), ";", fixed = TRUE)
     n <- pmax(lengths(gl), lengths(al))
     stats[[paste0("extra_", locus)]] <<- sum(n > 1 & !is.na(aas) & aas != "NA")
     v <- vapply(gl, function(z) sub("\\..*$", "", z[1]), "")
+    j <- vapply(gl, function(z) {
+      f <- strsplit(z[1], ".", fixed = TRUE)[[1]]
+      if (length(f) >= jpos) f[jpos] else NA_character_
+    }, "")
     cd <- vapply(al, function(z) z[1], "")
     v[v %in% c("NA", "")] <- NA
+    j[j %in% c("NA", "", "None")] <- NA
     cd[cd %in% c("NA", "")] <- NA
-    list(v = v, cdr3 = cd)
+    list(v = v, j = j, cdr3 = cd)
   }
-  pa <- pick(g[, 1], a[, 1], "a")
-  pb <- pick(g[, 2], a[, 2], "b")
+  pa <- pick(g[, 1], a[, 1], "a", 2)   # alpha: V.J.C
+  pb <- pick(g[, 2], a[, 2], "b", 3)   # beta:  V.D.J.C
   meta <- df[, setdiff(names(df), c("barcode", "CTgene", "CTaa", "CTnt", "CTstrict",
                                     "TCR1", "TCR2", "cdr3_aa1", "cdr3_aa2",
                                     "cdr3_nt1", "cdr3_nt2")), drop = FALSE]
   cells <- tibble::tibble(cell = df$barcode, va = pa$v, ca = pa$cdr3,
-                          vb = pb$v, cb = pb$cdr3)
+                          vb = pb$v, cb = pb$cdr3, ja = pa$j, jb = pb$j)
   cells <- dplyr::bind_cols(cells, tibble::as_tibble(meta))
   .finish_cells(cells, rlang::enquo(donor), rlang::enquos(...), stats, verbose,
                 source = "scRepertoire")
@@ -153,7 +159,8 @@ read_10x_contigs <- function(path, meta = NULL, by = "barcode", donor, ...,
                            paste(miss, collapse = ", "), call. = FALSE)
     tibble::tibble(
       sample = s, barcode = as.character(d$barcode), locus = as.character(d$chain),
-      v = d$v_gene, cdr3 = d$cdr3,
+      v = d$v_gene, j = if ("j_gene" %in% names(d)) d$j_gene else NA_character_,
+      cdr3 = d$cdr3,
       productive = if ("productive" %in% names(d)) .as_flag(d$productive) else TRUE,
       high_confidence = if ("high_confidence" %in% names(d)) .as_flag(d$high_confidence) else TRUE,
       umis = if ("umis" %in% names(d)) suppressWarnings(as.numeric(d$umis)) else NA_real_,
@@ -196,7 +203,8 @@ read_airr <- function(path, meta = NULL, by = "barcode", donor, ..., verbose = T
     reads <- num("duplicate_count")
     reads[is.na(reads)] <- num("consensus_count")[is.na(reads)]
     tibble::tibble(sample = s, barcode = as.character(d$cell_id),
-                   locus = toupper(as.character(d$locus)), v = d$v_call, cdr3 = cdr3,
+                   locus = toupper(as.character(d$locus)), v = d$v_call,
+                   j = if ("j_call" %in% names(d)) d$j_call else NA_character_, cdr3 = cdr3,
                    productive = if ("productive" %in% names(d)) .as_flag(d$productive) else TRUE,
                    high_confidence = TRUE, umis = umis, reads = reads)
   }))
@@ -249,6 +257,8 @@ read_airr <- function(path, meta = NULL, by = "barcode", donor, ..., verbose = T
                           ca = a$cdr3[match(cells$cell, a$cell)],
                           vb = b$v[match(cells$cell, b$cell)],
                           cb = b$cdr3[match(cells$cell, b$cell)],
+                          ja = a$j[match(cells$cell, a$cell)],
+                          jb = b$j[match(cells$cell, b$cell)],
                           sample = cells$sample, barcode = cells$barcode)
   if (!multi && all(cells$sample == "1")) cells$sample <- NULL
   if (!is.null(meta)) {
@@ -286,7 +296,8 @@ read_airr <- function(path, meta = NULL, by = "barcode", donor, ..., verbose = T
 #'
 #' @param df Data frame, one row per cell.
 #' @param map Named character vector `c(internal = "column in df")` for
-#'   `cell`, `donor`, `va`, `ca`, `vb`, `cb`. Names not given default to
+#'   `cell`, `donor`, `va`, `ca`, `vb`, `cb`, and optionally the J genes `ja`,
+#'   `jb` (used by `hexrows(gene_logos = TRUE)`). Names not given default to
 #'   themselves; `cell` defaults to the row number if absent.
 #' @inheritParams read_screpertoire
 #' @inherit read_screpertoire return
@@ -313,7 +324,12 @@ cells_from_df <- function(df, map = c(cell = "cell", donor = "donor", va = "va",
                         donor = df[[full[["donor"]]]],
                         va = df[[full[["va"]]]], ca = df[[full[["ca"]]]],
                         vb = df[[full[["vb"]]]], cb = df[[full[["cb"]]]])
-  rest <- df[, setdiff(names(df), unname(full)), drop = FALSE]
+  jmap <- map[intersect(names(map), c("ja", "jb"))]
+  for (jn in names(jmap)) {
+    if (!jmap[[jn]] %in% names(df)) stop("`df` lacks mapped column: ", jmap[[jn]], call. = FALSE)
+    out[[jn]] <- df[[jmap[[jn]]]]
+  }
+  rest <- df[, setdiff(names(df), c(unname(full), unname(jmap))), drop = FALSE]
   rest <- rest[, setdiff(names(rest), names(out)), drop = FALSE]
   out <- dplyr::bind_cols(out, rest)
   .finish_cells(out, rlang::quo(donor), rlang::enquos(...),
@@ -348,6 +364,10 @@ cells_from_df <- function(df, map = c(cell = "cell", donor = "donor", va = "va",
   cells$cb[bad_b] <- NA
   cells$va[is.na(cells$ca)] <- NA
   cells$vb[is.na(cells$cb)] <- NA
+  for (jn in intersect(c("ja", "jb"), names(cells))) {
+    cells[[jn]] <- normalize_v(cells[[jn]])
+    cells[[jn]][is.na(cells[[if (jn == "ja") "ca" else "cb"]])] <- NA
+  }
   has_a <- !is.na(cells$va) & !is.na(cells$ca)
   has_b <- !is.na(cells$vb) & !is.na(cells$cb)
   no_donor <- is.na(cells$donor) | cells$donor == ""
@@ -358,7 +378,8 @@ cells_from_df <- function(df, map = c(cell = "cell", donor = "donor", va = "va",
     cells$cell <- make.unique(cells$cell, sep = "#")
     stats$duplicated_cell_ids <- TRUE
   }
-  cells <- cells[, c(.tcr_cols, setdiff(names(cells), .tcr_cols))]
+  first <- c(.tcr_cols, intersect(c("ja", "jb"), names(cells)))
+  cells <- cells[, c(first, setdiff(names(cells), first))]
   .new_cells(cells, stats, source, verbose)
 }
 

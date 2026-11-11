@@ -14,7 +14,9 @@ within a clone; must return one value.}
 }
 \value{
 A tibble with \code{.clone_id}, \code{donor}, \code{va}, \code{ca}, \code{vb}, \code{cb},
-\code{cells}, then the summarised metadata columns.
+\code{cells}, then the summarised metadata columns. J genes (\code{ja}, \code{jb}), if
+present, are summarised by their most common value (a clone is defined
+by V + CDR3, so its cells may rarely differ in J).
 }
 \description{
 A clone is donor x TRAV + CDR3a + TRBV + CDR3b (amino acid). Only paired

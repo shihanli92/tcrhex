@@ -98,3 +98,24 @@ test_that("Seurat meta.data with AIRR-style _vj / _vdj columns (synthetic mouse 
   hd <- hexrows_data(x, ggplot2::aes(fill = cluster), queries = q, logos = FALSE)
   expect_equal(sum(hd$bins$clones[hd$bins$bin == 0]), 2)
 })
+
+test_that("J genes are read from every format (fixtures)", {
+  a <- read_10x_contigs(fx("contigs_10x_synthetic.csv"), donor = "P1", verbose = FALSE)
+  expect_equal(a$ja[a$cell == "AAAG-1"], "TRAJ42")      # J of the kept (most-UMI) alpha
+  expect_equal(a$jb[a$cell == "AAAC-1"], "TRBJ2-7")
+  expect_true(is.na(a$ja[a$cell == "AAAT-1"]))          # beta-only cell
+  expect_equal(names(a)[7:8], c("ja", "jb"))
+  x <- cells_from_df(data.frame(donor = "D", va = "TRAV27", ca = "CAGAGSQGNLIF",
+                                j_a = "TRAJ42*01", vb = "TRBV19", cb = "CASSIRSSYEQYF",
+                                j_b = "TRBJ2-7*01"),
+                     map = c(ja = "j_a", jb = "j_b"), verbose = FALSE)
+  expect_equal(c(x$ja, x$jb), c("TRAJ42", "TRBJ2-7"))
+})
+
+test_that("clones take the most common J", {
+  df <- data.frame(cell = paste0("c", 1:4), donor = "D", va = "TRAV27", ca = "CAGAGSQGNLIF",
+                   vb = "TRBV19", cb = "CASSIRSSYEQYF",
+                   ja = c("TRAJ42", "TRAJ9", "TRAJ42", NA), jb = c("TRBJ2-7", "TRBJ1-1", NA, NA))
+  cl <- tcr_clones(cells_from_df(df, map = c(ja = "ja", jb = "jb"), verbose = FALSE))
+  expect_equal(c(cl$ja, cl$jb), c("TRAJ42", "TRBJ1-1"))   # tie TRBJ1-1 / TRBJ2-7: alphabetical
+})

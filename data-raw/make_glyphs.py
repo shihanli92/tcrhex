@@ -1,8 +1,8 @@
-"""Trace the 20 amino-acid letters (+ '-') of a bold monospace font into flattened
+"""Trace A-Z, 0-9 and '-', '/', '|' of a bold monospace font into flattened
 outline polygons: inst/extdata/glyphs_dejavu_sans_mono_bold.tsv.
 
-Columns: letter, contour (1..), point order, x, y (font units / unitsPerEm,
-baseline at y = 0). Holes are separate contours; draw with the even-odd rule
+Columns: letter, contour (1..), point order, x, y, advance (font units /
+unitsPerEm, baseline at y = 0; advance = the glyph's advance width). Holes are separate contours; draw with the even-odd rule
 (ggplot2 geom_polygon `subgroup`).
 
 DejaVu Sans Mono Bold: Bitstream Vera Fonts Copyright (c) 2003 Bitstream, Inc.;
@@ -52,11 +52,13 @@ gs = font.getGlyphSet()
 cmap = font.getBestCmap()
 upem = font["head"].unitsPerEm
 with open(sys.argv[2], "w") as fh:
-    fh.write("letter\tcontour\torder\tx\ty\n")
-    for ch in "ACDEFGHIKLMNPQRSTVWY-":
+    fh.write("letter\tcontour\torder\tx\ty\tadvance\n")
+    hmtx = font["hmtx"]
+    for ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/|":
+        adv = hmtx[cmap[ord(ch)]][0] / upem
         pen = FlatPen(gs)
         gs[cmap[ord(ch)]].draw(pen)
         for ci, c in enumerate(pen.contours, 1):
             for pi, (x, y) in enumerate(c, 1):
-                fh.write(f"{ch}\t{ci}\t{pi}\t{x/upem:.4f}\t{y/upem:.4f}\n")
+                fh.write(f"{ch}\t{ci}\t{pi}\t{x/upem:.4f}\t{y/upem:.4f}\t{adv:.4f}\n")
 print("ok")

@@ -22,7 +22,10 @@ hexrows_data(
   hits = NULL,
   unit_in = 0.072,
   organism = NULL,
-  cumulative = FALSE
+  cumulative = FALSE,
+  gene_logos = FALSE,
+  gene_min_freq = 0.1,
+  gene_max = 4
 )
 }
 \arguments{
@@ -88,6 +91,16 @@ the hexagon composition, the largest-remainder split, the count and the
 CDR3 logos accumulate as the distance grows. Headers read "0", "<=12",
 "<=24", .... The legend and right-hand counts still count each clone once
 per row.}
+
+\item{gene_logos}{If \code{TRUE}, draw gene-usage logos on the two lower edges
+of each frame: alpha on the lower-left edge (TRAV stack on its first half,
+TRAJ on its second), beta on the lower-right (TRBV, then TRBJ). V and J
+are counted independently; each gene is one word, its height proportional
+to its share of the bin's clones, most frequent nearest the frame. Without
+J genes in the input, V spans the whole edge. See \code{\link[=gene_words]{gene_words()}}.}
+
+\item{gene_min_freq, gene_max}{Gene logos show genes with at least this
+share of the bin's clones, at most \code{gene_max} per stack.}
 }
 \value{
 A list of tibbles: \code{frames}, \code{hexes}, \code{logos}, \code{counts}, \code{labels},
