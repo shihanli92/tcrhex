@@ -213,3 +213,74 @@ top_public <- function(cells, n = 20, min_donors = 1, organism = c("human", "mou
   attr(q, "organism") <- organism
   q
 }
+
+#' The most expanded clones as queries, optionally per group
+#'
+#' Picks the `n` clones (donor x TRAV + CDR3a x TRBV + CDR3b) with the most
+#' cells, overall or within each level of `by` (any column or expression of
+#' the cell table, e.g. `by = tissue`, `by = paste(tissue, timepoint)`).
+#' Within a group, clones are ranked by cells in that group, then by all of
+#' the clone's cells, then alphabetically. The same TCR can be picked in
+#' several groups (each gets its own row). Only paired cells with V genes in
+#' the organism's loop table count.
+#'
+#' @param cells A cell table.
+#' @param n Clones per group.
+#' @param by Optional grouping: an unquoted column or expression evaluated in
+#'   `cells`. Cells where it is `NA` are ignored. Groups come in factor-level
+#'   order, else alphabetical.
+#' @param min_cells Minimum cells (in the group) for a clone to be picked.
+#' @inheritParams top_public
+#' @return A query table (see [as_queries()]) with `group`, `rank_in_group`,
+#'   `cells_in_group`, `cells` (all cells of the clone), `donor` and a `label`
+#'   ("top 1 in lung: 35 cells, donor m1"), shown as the row tag by
+#'   [hexrows()].
+#' @export
+#' @examples
+#' cells <- tcrhex_example_cells()   # synthetic
+#' top_expanded(cells, n = 1, by = tissue)
+top_expanded <- function(cells, n = 1, by = NULL, min_cells = 1,
+                         organism = c("human", "mouse")) {
+  organism <- match.arg(organism)
+  cells <- .as_cells(cells)
+  by_q <- rlang::enquo(by)
+  p <- cells[!is.na(cells$ca) & !is.na(cells$cb) & .v_known(cells$va, organism) &
+               .v_known(cells$vb, organism), , drop = FALSE]
+  if (rlang::quo_is_null(by_q)) {
+    g <- rep("all cells", nrow(p))
+    glev <- "all cells"
+  } else {
+    g <- rlang::eval_tidy(by_q, data = p)
+    if (length(g) == 1) g <- rep(g, nrow(p))
+    glev <- if (is.factor(g)) levels(g) else sort(unique(as.character(g[!is.na(g)])))
+    g <- as.character(g)
+  }
+  p$.group <- g
+  p <- p[!is.na(p$.group), , drop = FALSE]
+  tcr <- paste(p$va, p$ca, p$vb, p$cb, sep = ":")
+  p$.clone <- paste(p$donor, tcr, sep = "\r")
+  tot <- table(p$.clone)
+  cnt <- dplyr::count(tibble::tibble(group = p$.group, clone = p$.clone, donor = p$donor,
+                                     va = p$va, ca = p$ca, vb = p$vb, cb = p$cb),
+                      .data$group, .data$clone, .data$donor, .data$va, .data$ca, .data$vb,
+                      .data$cb, name = "cells_in_group")
+  cnt$cells <- as.integer(tot[cnt$clone])
+  cnt <- cnt[cnt$cells_in_group >= min_cells, , drop = FALSE]
+  cnt$tcr <- paste(cnt$va, cnt$ca, cnt$vb, cnt$cb, sep = ":")
+  cnt <- cnt[order(match(cnt$group, glev), -cnt$cells_in_group, -cnt$cells, cnt$tcr,
+                   cnt$donor, method = "radix"), , drop = FALSE]
+  cnt$rank_in_group <- stats::ave(seq_len(nrow(cnt)), cnt$group, FUN = seq_along)
+  cnt <- cnt[cnt$rank_in_group <= n, , drop = FALSE]
+  q <- tibble::tibble(
+    name = if (rlang::quo_is_null(by_q)) sprintf("#%d %s", cnt$rank_in_group, cnt$tcr) else
+      sprintf("%s #%d: %s", cnt$group, cnt$rank_in_group, cnt$tcr),
+    va = cnt$va, ca = cnt$ca, vb = cnt$vb, cb = cnt$cb,
+    group = cnt$group, rank_in_group = cnt$rank_in_group,
+    cells_in_group = cnt$cells_in_group, cells = cnt$cells, donor = cnt$donor,
+    label = sprintf("top %d in %s: %s cell%s, donor %s", cnt$rank_in_group, cnt$group,
+                    .fmt(cnt$cells_in_group), ifelse(cnt$cells_in_group == 1, "", "s"),
+                    cnt$donor))
+  attr(q, "source") <- "top_expanded"
+  attr(q, "organism") <- organism
+  q
+}

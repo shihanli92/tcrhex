@@ -139,3 +139,13 @@ test_that("cumulative mode: bins, logos and counts accumulate with distance", {
   p <- hexrows(cells, ggplot2::aes(fill = disease), queries = q, cumulative = TRUE)
   expect_silent(ggplot2::ggplot_build(p))
 })
+
+test_that("row tags from label / epitope columns, one per row", {
+  q <- data.frame(name = c("a", "b"), va = "TRAV12-2", ca = "CAVNGGSQGNLIF", vb = "TRBV19",
+                  cb = c("CASSIRSSYEQYF", "CASSIRSAYEQYF"), label = c("first", "second"))
+  hd <- hexrows_data(cells, queries = q, logos = FALSE)
+  expect_equal(hd$rows$tag, c("first", "second"))
+  q$epitope <- c("GILGFVFTL", NA)
+  hd <- hexrows_data(cells, queries = q, logos = FALSE)
+  expect_equal(hd$rows$tag, c("GILGFVFTL · first", "second"))
+})

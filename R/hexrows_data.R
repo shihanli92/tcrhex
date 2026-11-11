@@ -419,8 +419,12 @@ print.hexrows_data <- function(x, ...) {
   }
   extra <- NULL
   if ("epitope" %in% names(q)) extra <- q$epitope
-  if ("label" %in% names(q)) extra <- ifelse(is.na(extra %||% NA), q$label,
-                                             paste(extra, q$label, sep = " \u00b7 "))
+  if ("label" %in% names(q)) {
+    lab <- as.character(q$label)
+    extra <- if (is.null(extra)) lab else
+      ifelse(is.na(extra) | extra == "", lab,
+             ifelse(is.na(lab) | lab == "", extra, paste(extra, lab, sep = " \u00b7 ")))
+  }
   if (!is.null(extra)) {
     extra[is.na(extra)] <- ""
     tag <- ifelse(tag == "", extra, ifelse(extra == "", tag, paste(tag, extra, sep = " \u00b7 ")))

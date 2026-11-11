@@ -129,6 +129,17 @@ the donors near the query. Map it with
 `aes(fill = hla_carrier(hla, .row_allele))`: every column of the query table
 is available as `.row_<column>`. See the vignette.
 
+### The most expanded clone per tissue (or per anything)
+
+```r
+q <- top_expanded(cells, n = 1, by = tissue)   # n clones per tissue, most cells first
+hexrows(cells, aes(fill = tissue), queries = q)
+```
+
+`by` is any column or expression (`by = paste(tissue, timepoint)`). Each row is
+tagged with its group and cell count. Without `by`, it picks the n most
+expanded clones overall.
+
 ### Cumulative bins
 
 `hexrows(..., cumulative = TRUE)` makes each frame hold every clone up to its
@@ -163,6 +174,7 @@ The organism set in `top_public()` (or `tcrdist_paired()`) carries over to
 | `tcr_clones()` | donor × TRAV+CDR3α × TRBV+CDR3β clones; every metadata column summarised by one rule |
 | `tcrdist_paired()` | query × clone paired TCRdist (`d`, `d_a`, `d_b`) within a radius |
 | `top_public()` | the n beta chains in most donors, each with its dominant alpha and concordance |
+| `top_expanded()` | the n clones with most cells, overall or per level of any column (`by = tissue`) |
 | `hexrows()` / `hexrows_data()` | the figure / the tidy data behind it (incl. the per-bin table) |
 | `tissue_class()`, `summarise_tissue()`, `scale_fill_tissue()`, `scale_pattern_tissue()` | tissue compartments |
 | `hla_carrier()`, `hla_enriched()` | HLA carrier status, per-row enriched allele |
