@@ -9,6 +9,8 @@ Description: Draws "paired TCRdist hex rows" with 'ggplot2' from single-cell
     coloured by any categorical column, with CDR3 logos. Paired TCRdist
     reproduces 'tcrdist3' human defaults exactly.
 License: MIT + file LICENSE
+URL: https://github.com/shihanli92/tcrhex
+BugReports: https://github.com/shihanli92/tcrhex/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1

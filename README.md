@@ -21,15 +21,28 @@ data. The frames also carry frequency logos of the bin's CDR3α and CDR3β.
 
 ## Install
 
+From GitHub:
+
 ```r
-# from the package folder (or a tarball)
 install.packages("remotes")
-remotes::install_local("tcrhex")          # or: R CMD INSTALL tcrhex_0.1.0.tar.gz
-# optional, for the examples:
+remotes::install_github("shihanli92/tcrhex")
+
+# with the vignette (needs knitr + rmarkdown; scRepertoire for its examples)
+remotes::install_github("shihanli92/tcrhex", build_vignettes = TRUE)
+vignette("tcrhex")
+```
+
+`pak::pak("shihanli92/tcrhex")` works too. The examples use scRepertoire's public
+data, which comes from Bioconductor:
+
+```r
+install.packages("BiocManager")
 BiocManager::install("scRepertoire")
 ```
 
-Requires a C++ compiler (Rtools on Windows, Xcode command-line tools on macOS).
+The package compiles a small C++ kernel, so it needs build tools: Rtools on
+Windows, or the Xcode command-line tools on macOS (`xcode-select --install`).
+Linux needs `r-base-dev` or an equivalent.
 
 ## Examples
 
