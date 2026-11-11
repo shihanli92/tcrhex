@@ -1,0 +1,9 @@
+^data-raw$
+^\.Rproj\.user$
+^.*\.Rproj$
+^README\.Rmd$
+^man/figures/.*\.R$
+^bundle$
+^\.git$
+^doc$
+^Meta$

@@ -1,0 +1,139 @@
+---
+title: "Paired TCRdist hex rows with tcrhex"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Paired TCRdist hex rows with tcrhex}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", dpi = 110)
+has_screp <- requireNamespace("scRepertoire", quietly = TRUE)
+library(tcrhex)
+library(ggplot2)
+```
+
+`tcrhex` turns single-cell TCR metadata into "paired TCRdist hex rows". Each
+row is one query TCR. Along the row, the clones of your dataset are binned by
+their paired TCRdist to the query and drawn as small hexagons coloured by any
+categorical column.
+
+This vignette uses the public example data shipped with scRepertoire
+(`contig_list`: 8 samples, 4 patients with acute respiratory distress, blood
+"B" and lung "L"). The HLA section uses the package's **synthetic** cells.
+
+## 1. Read cells
+
+Every reader returns the same cell table: `cell`, `donor`, `va`, `ca`, `vb`,
+`cb`, plus all your metadata columns. A donor (person) is the only required
+metadata. Cells with two chains of one locus keep the chain with most UMIs,
+and the readers report how many such cells there were. Unpaired cells are
+kept, because they count for `top_public()`, but they cannot enter paired
+TCRdist.
+
+```{r read, eval = has_screp}
+data("contig_list", package = "scRepertoire")
+samples <- c("P17B", "P17L", "P18B", "P18L", "P19B", "P19L", "P20B", "P20L")
+meta <- data.frame(sample = samples, patient = sub("[BL]$", "", samples),
+                   tissue = ifelse(grepl("B$", samples), "peripheral blood", "lung"))
+cells <- read_10x_contigs(setNames(contig_list, samples), meta = meta, by = "sample",
+                          donor = patient)
+```
+
+The same data through scRepertoire gives the same table, except that
+scRepertoire's `CTaa` does not record UMIs. For a cell with two alpha (or two
+beta) chains, the first listed chain is used:
+
+```{r screp, eval = has_screp}
+comb <- scRepertoire::combineTCR(contig_list, samples = samples)
+cells_s <- read_screpertoire(comb, donor = sub("[BL]$", "", sample))
+```
+
+## 2. Clones and paired TCRdist
+
+```{r clones, eval = has_screp}
+clones <- tcr_clones(cells)
+clones
+q <- top_public(cells, n = 10)
+q[, c("rank", "va", "ca", "vb", "cb", "donors", "paired_donors", "concordance")]
+hits <- tcrdist_paired(q, clones, radius = 108)
+hits
+```
+
+`tcrdist_paired()` reproduces tcrdist3's human defaults (CDR1 + CDR2 + CDR2.5
+of the V gene, plus 3 × CDR3 with 3 / 2 residues trimmed, BLOSUM62-based
+mismatches, gap penalty 4 at the best position). The package tests check it
+against tcrdist3 itself.
+
+## 3. The figure
+
+```{r fig1, eval = has_screp, fig.width = 11, fig.height = 8}
+p <- hexrows(cells, aes(fill = tissue), queries = q, clones = clones) +
+  scale_fill_manual(values = c("peripheral blood" = "#0072B2", lung = "#E69F00",
+                               multiple = "#56B4E9"))
+p
+```
+
+`ggsave_hexrows("rows.png", p)` saves it at 0.072 inch per hexagon unit with a
+page sized to the rows and bins.
+
+### Fill is any column, the ggplot way
+
+There are no colour modes. Map any categorical expression:
+
+* `aes(fill = sample)`, `aes(fill = paste(tissue, timepoint))`;
+* cell-level values are summarised per clone by `summarise_fill`
+  (`summarise_unique`: one value stays, several give `"multiple"`;
+  `summarise_most_common`; or your own `function(values)`);
+* the hexagons of a bin are banded in level order, so reorder with factor levels
+  (`forcats::fct_relevel()`);
+* without a scale, up to 8 fixed hues are used, then "Other" and "unknown",
+  with clone counts in the legend; add any `scale_fill_*()` to change them.
+
+### Tissue compartments
+
+```{r tissue, eval = has_screp, fig.width = 11, fig.height = 5}
+hexrows(cells, aes(fill = tissue_class(tissue), pattern = tissue_class(tissue)),
+        queries = q[1:4, ], clones = clones, summarise_fill = summarise_tissue) +
+  scale_fill_tissue() + scale_pattern_tissue()
+```
+
+`tissue_class()` maps free text to compartments by keyword (see
+`tissue_rules()`). The tissue scales use Okabe-Ito colours plus textures
+(stripes = gut, crosshatch = skin, dots = CNS / CSF), drawn by the package
+itself, so ggpattern is not needed.
+
+## 4. Your own queries
+
+```{r query, eval = has_screp, fig.width = 11, fig.height = 2.6}
+hexrows(cells, aes(fill = tissue),
+        queries = c("rank-1 TCR again" = paste(q$va[1], q$ca[1], q$vb[1], q$cb[1], sep = ":")),
+        clones = clones)
+```
+
+Queries are validated (V genes against the loop table, CDR3s must be amino
+acids starting with C) before anything is computed.
+
+## 5. HLA (synthetic data)
+
+```{r hla, fig.width = 11, fig.height = 4.5}
+cells2 <- tcrhex_example_cells(n_donors = 40)          # SYNTHETIC
+cl2 <- tcr_clones(cells2)
+q2 <- top_public(cells2, 3)
+enr <- hla_enriched(tcrdist_paired(q2, cl2, radius = 24), cl2, radius = 24, queries = q2)
+enr[, c("query", "allele", "k", "n", "p")]
+q2$allele <- enr$allele
+hexrows(cells2, aes(fill = hla_carrier(hla, .row_allele)), queries = q2, clones = cl2,
+        row_tag = enr$text, title = "SYNTHETIC data: each row coloured by its own allele")
+```
+
+Every column of the query table is available in `aes()` as `.row_<column>`.
+
+## 6. The data behind the figure
+
+```{r data, eval = has_screp}
+hd <- hexrows_data(cells, aes(fill = tissue), queries = q, clones = clones)
+hd
+head(hd$bins)   # row, bin, level, clones, shown
+```

@@ -1,0 +1,14 @@
+barcode,is_cell,contig_id,high_confidence,length,chain,v_gene,d_gene,j_gene,c_gene,full_length,productive,cdr3,cdr3_nt,reads,umis,raw_clonotype_id
+AAAC-1,True,AAAC-1_contig_1,True,500,TRA,TRAV12-2,None,TRAJ42,TRAC,True,True,CAVNGGSQGNLIF,TGT,1000,8,clonotype1
+AAAC-1,True,AAAC-1_contig_2,True,500,TRB,TRBV19,None,TRBJ2-7,TRBC2,True,True,CASSIRSSYEQYF,TGT,2000,12,clonotype1
+AAAG-1,True,AAAG-1_contig_1,True,500,TRA,TRAV27,None,TRAJ42,TRAC,True,True,CAGAGSQGNLIF,TGT,900,9,clonotype2
+AAAG-1,True,AAAG-1_contig_2,True,500,TRA,TRAV21,None,TRAJ33,TRAC,True,True,CAVRDSNYQLIW,TGT,800,2,clonotype2
+AAAG-1,True,AAAG-1_contig_3,True,500,TRB,TRBV6-5,None,TRBJ2-7,TRBC2,True,True,CASSYSGGSYEQYF,TGT,3000,15,clonotype2
+AAAT-1,True,AAAT-1_contig_1,True,500,TRB,TRBV20-1,None,TRBJ1-2,TRBC1,True,True,CSARDRTGNGYTF,TGT,700,6,clonotype3
+AACC-1,True,AACC-1_contig_1,True,500,TRA,TRAV8-4,None,TRAJ9,TRAC,True,False,None,TGT,300,3,clonotype4
+AACC-1,True,AACC-1_contig_2,True,500,TRB,TRBV9,None,TRBJ2-2,TRBC2,True,True,CASSVGGSSYNEQFF,TGT,1500,10,clonotype4
+AACG-1,True,AACG-1_contig_1,True,500,TRA,TRAV29DV5,None,TRAJ49,TRAC,True,True,CAASAGSNYQLIW,TGT,600,5,clonotype5
+AACG-1,True,AACG-1_contig_2,True,500,TRB,TRBV7-2*01,None,TRBJ2-1,TRBC2,True,True,CASSDRYEQYF,TGT,900,7,clonotype5
+AACT-1,True,AACT-1_contig_1,True,500,TRA,TRAV12-2,None,TRAJ42,TRAC,True,True,CAVNGGSQGNLIF,TGT,500,4,clonotype6
+AACT-1,True,AACT-1_contig_2,True,500,TRB,TRBV19,None,TRBJ2-7,TRBC2,True,True,CASSIRSSYEQYF,TGT,800,6,clonotype6
+AACT-1,True,AACT-1_contig_3,True,500,TRB,TRBV5-1,None,TRBJ2-7,TRBC2,True,True,CASSLDRVGEQFF,TGT,100,1,clonotype6

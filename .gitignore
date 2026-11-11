@@ -1,0 +1,8 @@
+data-raw/bundle/
+data-raw/*.png
+bundle/
+*.o
+*.so
+.Rhistory
+doc
+Meta

@@ -1,0 +1,40 @@
+tcrhex bundles material derived from third-party work:
+
+1. inst/extdata/tcrdist_vloops_human.tsv (V-gene CDR1 / CDR2 / CDR2.5 loops)
+   is derived from tcrdist3's tcrdist/db/alphabeta_gammadelta_db.tsv, and
+   src/tcrdist.cpp ports pwseqdist's nb_vector_tcrdist (used by tcrdist3).
+
+   MIT License
+
+   Copyright (c) 2020 Koshlan Mayer-Blackwell
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+2. inst/extdata/glyphs_dejavu_sans_mono_bold.tsv (letter outlines for the
+   CDR3 logos) is traced from DejaVu Sans Mono Bold.
+   Fonts are (c) Bitstream (see below). DejaVu changes are in public domain.
+   Bitstream Vera Fonts Copyright (c) 2003 by Bitstream, Inc. All Rights
+   Reserved. Bitstream Vera is a trademark of Bitstream, Inc. Permission is
+   hereby granted, free of charge, to any person obtaining a copy of the fonts
+   accompanying this license ("Fonts") and associated documentation files (the
+   "Font Software"), to reproduce and distribute the Font Software, including
+   without limitation the rights to use, copy, merge, publish, distribute,
+   and/or sell copies of the Font Software, and to permit persons to whom the
+   Font Software is furnished to do so, subject to the conditions in the
+   Bitstream Vera license (https://dejavu-fonts.github.io/License.html).

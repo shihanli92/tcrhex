@@ -1,0 +1,39 @@
+Package: tcrhex
+Title: Paired TCRdist Hex Rows from Single-Cell TCR Data
+Version: 0.1.0
+Authors@R: person("tcrhex", "authors", role = c("aut", "cre"), email = "tcrhex@example.invalid")
+Description: Draws "paired TCRdist hex rows" with 'ggplot2' from single-cell
+    T-cell receptor metadata ('scRepertoire', 10x Cell Ranger contigs, AIRR
+    rearrangements or any data frame): one row per query TCR, one hexagonal
+    frame per paired-TCRdist distance bin, one small hexagon per clone,
+    coloured by any categorical column, with CDR3 logos. Paired TCRdist
+    reproduces 'tcrdist3' human defaults exactly.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Depends: R (>= 4.1)
+Imports:
+    dplyr (>= 1.1.0),
+    ggplot2 (>= 3.4.0),
+    grid,
+    readr,
+    rlang,
+    Rcpp,
+    scales,
+    stats,
+    tibble,
+    utils
+LinkingTo: Rcpp
+Suggests:
+    knitr,
+    rmarkdown,
+    scRepertoire,
+    Seurat,
+    SeuratObject,
+    SingleCellExperiment,
+    SummarizedExperiment,
+    systemfonts,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr
+Config/testthat/edition: 3

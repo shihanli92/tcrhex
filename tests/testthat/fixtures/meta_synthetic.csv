@@ -1,0 +1,7 @@
+barcode,patient,tissue,seurat_clusters
+AAAC-1,P1,blood,0
+AAAG-1,P1,lung,1
+AAAT-1,P2,blood,1
+AACC-1,P2,colon,2
+AACG-1,P2,blood,2
+AACT-1,P1,PBMC,0
