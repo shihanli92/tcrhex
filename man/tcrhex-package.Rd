@@ -18,6 +18,14 @@ Koshlan Mayer-Blackwell); the distance kernel ports pwseqdist's
 \code{inst/extdata/glyphs_dejavu_sans_mono_bold.tsv} are traced from DejaVu Sans
 Mono Bold (Bitstream Vera / DejaVu license). See \code{inst/COPYRIGHTS}.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/shihanli92/tcrhex}
+  \item Report bugs at \url{https://github.com/shihanli92/tcrhex/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: tcrhex authors \email{tcrhex@example.invalid}
 

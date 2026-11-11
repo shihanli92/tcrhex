@@ -39,13 +39,13 @@ hexrows <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius = 10
                     logo_font = NULL, summarise_fill = summarise_unique,
                     fold_levels = 8, dominant = 0.10, row_tag = NULL,
                     clones = NULL, hits = NULL, title = NULL, subtitle = NULL,
-                    unit_in = 0.072) {
+                    unit_in = 0.072, organism = NULL) {
   hd <- hexrows_data(cells, mapping, queries = queries, radius = radius,
                      bin_width = bin_width, max_hex = max_hex, logos = logos,
                      logo_trim = logo_trim, logo_font = logo_font,
                      summarise_fill = summarise_fill, fold_levels = fold_levels,
                      dominant = dominant, row_tag = row_tag, clones = clones,
-                     hits = hits, unit_in = unit_in)
+                     hits = hits, unit_in = unit_in, organism = organism)
   hexrows_plot(hd, title = title, subtitle = subtitle)
 }
 

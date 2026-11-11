@@ -20,6 +20,9 @@
 #' @param clones Clone table from [tcr_clones()] (or any data frame with `va`,
 #'   `ca`, `vb`, `cb`).
 #' @param radius Keep clones with `d <= radius`; `Inf` keeps all.
+#' @param organism `"human"` (default) or `"mouse"`: which tcrdist3 V-gene
+#'   loop table to use. Mouse distances match tcrdist3's
+#'   `TCRrep(organism = "mouse")`.
 #' @param verbose Report clones dropped for unknown V genes.
 #' @return A tibble of hits, one row per (query, clone) within the radius:
 #'   `query` (name), `.clone_id`, `d`, `d_a`, `d_b`, then the clone's `donor`,
@@ -28,19 +31,24 @@
 #' @examples
 #' clones <- tcr_clones(tcrhex_example_cells())
 #' tcrdist_paired("TRAV12-2:CAVNGGSQGNLIF:TRBV19:CASSIRSSYEQYF", clones, radius = 50)
-tcrdist_paired <- function(queries, clones, radius = 108, verbose = TRUE) {
-  q <- as_queries(queries)
+tcrdist_paired <- function(queries, clones, radius = 108, organism = c("human", "mouse"),
+                           verbose = TRUE) {
+  organism <- match.arg(organism)
+  q <- as_queries(queries, organism = organism)
   if (!".clone_id" %in% names(clones)) clones$.clone_id <- seq_len(nrow(clones))
-  ok_a <- .v_known(clones$va, "TRA")
-  ok_b <- .v_known(clones$vb, "TRB")
+  ok_a <- .v_known(clones$va, organism)
+  ok_b <- .v_known(clones$vb, organism)
   ok <- ok_a & ok_b & !is.na(clones$ca) & !is.na(clones$cb)
   if (any(!ok) && verbose) {
     unk <- sort(unique(c(clones$va[!ok_a], clones$vb[!ok_b])))
     unk <- unk[!is.na(unk)]
+    guess <- .guess_organism(c(clones$va, clones$vb))
+    hint <- if (!is.na(guess) && guess != organism)
+      sprintf(" Most V genes are %s genes: use organism = \"%s\"?", guess, guess) else ""
     warning(sprintf(
-      "%s of %s clones dropped: V gene not in the tcrdist3 human loop table (%s).",
-      .fmt(sum(!ok)), .fmt(nrow(clones)),
-      paste(utils::head(unk, 10), collapse = ", ")), call. = FALSE)
+      "%s of %s clones dropped: V gene not in the tcrdist3 %s loop table (%s).%s",
+      .fmt(sum(!ok)), .fmt(nrow(clones)), organism,
+      paste(utils::head(unk, 10), collapse = ", "), hint), call. = FALSE)
   }
   cl <- clones[ok, , drop = FALSE]
   dm <- .tcr_dm()
@@ -52,8 +60,8 @@ tcrdist_paired <- function(queries, clones, radius = 108, verbose = TRUE) {
   eb <- .encode_seqs(ub)
   out <- vector("list", nrow(q))
   for (i in seq_len(nrow(q))) {
-    va_d <- .vloop_dist(q$va[i], "TRA")[cl$va]
-    vb_d <- .vloop_dist(q$vb[i], "TRB")[cl$vb]
+    va_d <- .vloop_dist(q$va[i], organism)[cl$va]
+    vb_d <- .vloop_dist(q$vb[i], organism)[cl$vb]
     ca_d <- .tcrdist_one_to_many(.encode_seqs(q$ca[i])$codes, ea$codes, ea$offsets,
                                  ea$lengths, dm, 1L, 4L, 3L, 2L, FALSE)
     cb_d <- .tcrdist_one_to_many(.encode_seqs(q$cb[i])$codes, eb$codes, eb$offsets,
@@ -71,6 +79,7 @@ tcrdist_paired <- function(queries, clones, radius = 108, verbose = TRUE) {
   hits <- dplyr::left_join(hits, info, by = ".clone_id")
   attr(hits, "radius") <- radius
   attr(hits, "dropped_unknown_v") <- sum(!ok)
+  attr(hits, "organism") <- organism
   hits
 }
 
@@ -84,11 +93,14 @@ tcrdist_paired <- function(queries, clones, radius = 108, verbose = TRUE) {
 #' @param queries Character vector `"TRAV:CDR3a:TRBV:CDR3b"` (names, if any,
 #'   become query names) or a data frame with `va`, `ca`, `vb`, `cb` and
 #'   optionally `name`, `label`, `epitope`, `concordance`, `rank`, ... (kept).
+#' @param organism `"human"` or `"mouse"`: V genes are checked against that
+#'   organism's tcrdist3 loop table.
 #' @return A tibble with `name`, `va`, `ca`, `vb`, `cb` and any extra columns.
 #' @export
 #' @examples
 #' as_queries(c(flu = "TRAV27:CAGAGSQGNLIF:TRBV19:CASSIRSSYEQYF"))
-as_queries <- function(queries) {
+as_queries <- function(queries, organism = c("human", "mouse")) {
+  organism <- match.arg(organism)
   if (is.character(queries)) {
     parts <- strsplit(queries, ":", fixed = TRUE)
     if (any(lengths(parts) != 4)) {
@@ -115,15 +127,21 @@ as_queries <- function(queries) {
   q$cb <- toupper(trimws(q$cb))
   q$name <- as.character(q$name)
   probs <- character()
-  ba <- which(!.v_known(q$va, "TRA"))
-  bb <- which(!.v_known(q$vb, "TRB"))
-  if (length(ba)) probs <- c(probs, sprintf("query %s: unknown TRAV '%s'", q$name[ba], q$va[ba]))
-  if (length(bb)) probs <- c(probs, sprintf("query %s: unknown TRBV '%s'", q$name[bb], q$vb[bb]))
+  ba <- which(!.v_known(q$va, organism))
+  bb <- which(!.v_known(q$vb, organism))
+  if (length(ba)) probs <- c(probs, sprintf("query %s: unknown %s TRAV '%s'", q$name[ba], organism, q$va[ba]))
+  if (length(bb)) probs <- c(probs, sprintf("query %s: unknown %s TRBV '%s'", q$name[bb], organism, q$vb[bb]))
   ca <- which(is.na(q$ca) | !.valid_cdr3(q$ca))
   cb <- which(is.na(q$cb) | !.valid_cdr3(q$cb))
   if (length(ca)) probs <- c(probs, sprintf("query %s: CDR3a '%s' is not an amino-acid sequence starting with C", q$name[ca], q$ca[ca]))
   if (length(cb)) probs <- c(probs, sprintf("query %s: CDR3b '%s' is not an amino-acid sequence starting with C", q$name[cb], q$cb[cb]))
   if (anyDuplicated(q$name)) probs <- c(probs, "query names must be unique")
+  if (length(c(ba, bb))) {
+    guess <- .guess_organism(c(q$va, q$vb))
+    if (!is.na(guess) && guess != organism) {
+      probs <- c(probs, sprintf("(these look like %s V genes: use organism = \"%s\")", guess, guess))
+    }
+  }
   if (length(probs)) stop("Invalid queries:\n  ", paste(probs, collapse = "\n  "), call. = FALSE)
   q[, c("name", "va", "ca", "vb", "cb", setdiff(names(q), c("name", "va", "ca", "vb", "cb")))]
 }
@@ -145,21 +163,23 @@ as_queries <- function(queries) {
 #' @param cells A cell table.
 #' @param n Number of queries.
 #' @param min_donors Minimum number of donors for a beta.
+#' @param organism `"human"` or `"mouse"` (V genes must be in its loop table).
 #' @return A query table (see [as_queries()]) with `rank`, `donors`,
 #'   `paired_donors`, `donors_with_alpha`, `concordance`.
 #' @export
 #' @examples
 #' top_public(tcrhex_example_cells(), n = 3)
-top_public <- function(cells, n = 20, min_donors = 1) {
+top_public <- function(cells, n = 20, min_donors = 1, organism = c("human", "mouse")) {
+  organism <- match.arg(organism)
   cells <- .as_cells(cells)
-  b <- cells[!is.na(cells$cb) & .v_known(cells$vb, "TRB"), , drop = FALSE]
+  b <- cells[!is.na(cells$cb) & .v_known(cells$vb, organism), , drop = FALSE]
   b$beta <- paste(b$vb, b$cb, sep = ":")
   per <- dplyr::summarise(dplyr::group_by(b, .data$beta),
                           donors = dplyr::n_distinct(.data$donor), n_cells = dplyr::n(),
                           .groups = "drop")
   per <- per[per$donors >= min_donors, ]
   per <- per[order(-per$donors, -per$n_cells, per$beta, method = "radix"), ]
-  p <- b[!is.na(b$ca) & .v_known(b$va, "TRA") & b$beta %in% per$beta, , drop = FALSE]
+  p <- b[!is.na(b$ca) & .v_known(b$va, organism) & b$beta %in% per$beta, , drop = FALSE]
   p$alpha <- paste(p$va, p$ca, sep = ":")
   # per donor: the alpha with the most cells (ties alphabetical)
   da <- dplyr::count(p, .data$beta, .data$donor, .data$alpha, name = "k")
@@ -190,5 +210,6 @@ top_public <- function(cells, n = 20, min_donors = 1) {
     donors_with_alpha = res$donors_with_alpha,
     concordance = res$donors_with_alpha / res$paired_donors)
   attr(q, "source") <- "top_public"
+  attr(q, "organism") <- organism
   q
 }

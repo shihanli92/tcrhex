@@ -12,8 +12,8 @@ data. The frames also carry frequency logos of the bin's CDR3α and CDR3β.
   lists, or Seurat / SingleCellExperiment objects after `combineExpression()`),
   10x Cell Ranger `filtered_contig_annotations.csv`, AIRR rearrangement TSV, or
   any data frame.
-* **Paired TCRdist**: reproduces tcrdist3's human defaults exactly (tested
-  against tcrdist3 0.3 on 308,380 query × clone pairs). Only queries are
+* **Paired TCRdist**: reproduces tcrdist3's defaults exactly, for human and
+  mouse (tested against tcrdist3 0.3 on 322,380 query × clone pairs). Only queries are
   compared against all clones, in C++: 20 queries × 500,000 clones take
   about 5 s.
 * **ggplot-like**: `hexrows(cells, aes(fill = <any column or expression>))`
@@ -128,6 +128,26 @@ p <- hexrows(cells, aes(fill = hla_carrier(hla, "A*02")),
 the donors near the query. Map it with
 `aes(fill = hla_carrier(hla, .row_allele))`: every column of the query table
 is available as `.row_<column>`. See the vignette.
+
+### Mouse
+
+Pass `organism = "mouse"`. This uses tcrdist3's mouse V-gene loops, and the
+distances match `TCRrep(organism = "mouse")` exactly. One row per cell with
+AIRR-style columns (for example `v_call_vj`, `junction_aa_vj`, `v_call_vdj`,
+`junction_aa_vdj` in a Seurat `meta.data`) goes through `cells_from_df()`:
+
+```r
+md <- as.data.frame(dplyr::ungroup(sobj@meta.data))
+md$barcode <- colnames(sobj)
+cells <- cells_from_df(md, map = c(cell = "barcode", donor = "mouse_id",
+                                   va = "v_call_vj",  ca = "junction_aa_vj",
+                                   vb = "v_call_vdj", cb = "junction_aa_vdj"))
+p <- hexrows(cells, aes(fill = seurat_clusters),
+             queries = top_public(cells, 20, organism = "mouse"))
+```
+
+The organism set in `top_public()` (or `tcrdist_paired()`) carries over to
+`hexrows()`. With user-given queries, set `hexrows(..., organism = "mouse")`.
 
 ## The pieces
 

@@ -54,6 +54,9 @@
 #'   aesthetics are then evaluated on its (already per-clone) columns.
 #' @param unit_in Inches per hexagon unit, used to place the text (as by
 #'   [ggsave_hexrows()]).
+#' @param organism `"human"` or `"mouse"` (tcrdist3 V-gene loop table). By
+#'   default taken from `queries` / `hits` when they come from
+#'   [top_public()] / [tcrdist_paired()] with an organism, else `"human"`.
 #' @return A list of tibbles: `frames`, `hexes`, `logos`, `counts`, `labels`,
 #'   `lines`, `bins` (the per-bin table: `row`, `bin`, `level`, `clones`,
 #'   `shown`), `hits` (every hit with its level, bin and whether it is shown),
@@ -67,7 +70,10 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
                          bin_width = 12, max_hex = 19, logos = TRUE, logo_trim = 1,
                          logo_font = NULL, summarise_fill = summarise_unique,
                          fold_levels = 8, dominant = 0.10, row_tag = NULL,
-                         clones = NULL, hits = NULL, unit_in = 0.072) {
+                         clones = NULL, hits = NULL, unit_in = 0.072,
+                         organism = NULL) {
+  organism <- organism %||% attr(queries, "organism") %||% attr(hits, "organism") %||% "human"
+  organism <- match.arg(organism, c("human", "mouse"))
   if (is.null(cells)) {
     # clone-level input: precomputed hits carrying the clone metadata
     if (is.null(hits) || is.null(queries)) {
@@ -75,7 +81,7 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
            "with the clone's metadata columns).", call. = FALSE)
     }
     from_top <- FALSE
-    q <- as_queries(queries)
+    q <- as_queries(queries, organism = organism)
     hits <- tibble::as_tibble(hits)
     if (!".clone_id" %in% names(hits)) hits$.clone_id <- seq_len(nrow(hits))
     if (!"cells" %in% names(hits)) hits$cells <- 1L
@@ -83,9 +89,9 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
     cells <- .as_cells(cells)
     if (is.null(clones)) clones <- tcr_clones(cells)
     from_top <- is.null(queries)
-    if (from_top) queries <- top_public(cells, 20)
-    q <- as_queries(queries)
-    if (is.null(hits)) hits <- tcrdist_paired(q, clones, radius = radius)
+    if (from_top) queries <- top_public(cells, 20, organism = organism)
+    q <- as_queries(queries, organism = organism)
+    if (is.null(hits)) hits <- tcrdist_paired(q, clones, radius = radius, organism = organism)
   }
   q$.row <- seq_len(nrow(q))
   hits <- hits[hits$d <= radius & hits$query %in% q$name, , drop = FALSE]

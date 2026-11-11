@@ -4,20 +4,27 @@
 \alias{vgene_loops}
 \title{V-gene loop table used by paired TCRdist}
 \usage{
-vgene_loops()
+vgene_loops(organism = c("human", "mouse"))
+}
+\arguments{
+\item{organism}{\code{"human"} or \code{"mouse"}.}
 }
 \value{
-A tibble with columns \code{gene}, \code{chain}, \code{allele}, \code{cdr1}, \code{cdr2},
-\code{cdr25}, \code{other_alleles_differ}.
+A tibble with columns \code{gene}, \code{chain} (\code{TRA} / \code{TRB}, as filed in
+the tcrdist3 db), \code{allele}, \code{cdr1}, \code{cdr2}, \code{cdr25},
+\code{other_alleles_differ}.
 }
 \description{
-Human TRAV / TRBV genes with their IMGT-aligned CDR1, CDR2 and CDR2.5
-(pMHC-facing) loops, derived from tcrdist3's \code{alphabeta_gammadelta_db.tsv}
-(MIT License, Copyright (c) 2020 Koshlan Mayer-Blackwell). Genes are keyed
-without allele; the \verb{*01} allele's loops are used (as when tcrdist3 is given
-\code{"TRAV27*01"}). \code{other_alleles_differ} flags genes whose other alleles have
-different loops.
+V genes with their IMGT-aligned CDR1, CDR2 and CDR2.5 (pMHC-facing) loops,
+derived from tcrdist3's \code{alphabeta_gammadelta_db.tsv} (MIT License,
+Copyright (c) 2020 Koshlan Mayer-Blackwell), for human or mouse. Genes are
+keyed without allele; the \verb{*01} allele's loops are used (as when tcrdist3
+is given \code{"TRAV27*01"}). \code{other_alleles_differ} flags genes whose other
+alleles have different loops. The gamma / delta V genes are included
+because, as in tcrdist3, loops are looked up by gene name whatever the chain
+(e.g. a TRDV gene rearranged into the TRA locus).
 }
 \examples{
 head(vgene_loops())
+head(vgene_loops("mouse"))
 }

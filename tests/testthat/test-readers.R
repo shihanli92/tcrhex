@@ -47,6 +47,13 @@ test_that("normalize_v handles 10x / AIRR spellings", {
   expect_equal(normalize_v(c("TRBV19*01", "TRAV29DV5", "TRAV38-2DV8", "TRBV6-5*01,TRBV6-6*01",
                              "None", "")),
                c("TRBV19", "TRAV29/DV5", "TRAV38-2/DV8", "TRBV6-5", NA, NA))
+  # mouse spellings
+  expect_equal(normalize_v(c("TRAV15D-1-DV6D-1", "TRAV15D-1/DV6D-1*01", "TRAV16DDV11",
+                             "TRAV13-4DV7", "TRAV14D-1", "TRAV6N-7")),
+               c("TRAV15D-1/DV6D-1", "TRAV15D-1/DV6D-1", "TRAV16D/DV11", "TRAV13-4/DV7",
+                 "TRAV14D-1", "TRAV6N-7"))
+  expect_true(all(tcrhex:::.v_known(c("TRAV15D-1/DV6D-1", "TRAV16D/DV11", "TRAV13-4/DV7"),
+                                    "mouse")))
 })
 
 test_that("scRepertoire objects are read (public example data)", {
@@ -65,4 +72,29 @@ test_that("scRepertoire objects are read (public example data)", {
   rownames(a) <- rownames(b) <- NULL
   attr(a, "tcrhex_summary") <- attr(b, "tcrhex_summary") <- NULL
   expect_identical(a, b)
+})
+
+test_that("Seurat meta.data with AIRR-style _vj / _vdj columns (synthetic mouse cells)", {
+  md <- data.frame(
+    barcode = c("AAAC-1", "AAAG-1", "AAAT-1", "AACC-1"),
+    mouse_id = c("m1", "m1", "m2", "m2"),
+    v_call_vj = c(NA, "TRAV6N-7", "TRAV14D-1", "TRAV19"),
+    junction_aa_vj = c(NA, "CALGPGTGGYKVVF", "CAARMSNYNVLYF", "CAAGSQGTGSKLSF"),
+    v_call_vdj = c(NA, "TRBV1", "TRBV20", NA),
+    junction_aa_vdj = c(NA, "CTCRTGTGTYEQYF", "CGARDRGKSLEEVFF", NA),
+    umis_vj = c(NA, "5", "2", "5"), cluster = c("0", "1", "1", "2"))
+  md <- dplyr::group_by(md, v_call_vj, junction_aa_vj)   # grouped, as after group_by()
+  x <- cells_from_df(md, map = c(cell = "barcode", donor = "mouse_id", va = "v_call_vj",
+                                 ca = "junction_aa_vj", vb = "v_call_vdj",
+                                 cb = "junction_aa_vdj"), verbose = FALSE)
+  s <- attr(x, "tcrhex_summary")
+  expect_equal(c(s$cells, s$paired, s$alpha_only), c(3L, 2L, 1L))
+  expect_equal(attr(x, "tcrhex_summary")$no_chain, 1L)
+  expect_true(all(c("umis_vj", "cluster") %in% names(x)))
+  expect_false(dplyr::is_grouped_df(x))
+  cl <- tcr_clones(x)
+  q <- top_public(x, 5, organism = "mouse")
+  expect_equal(attr(q, "organism"), "mouse")
+  hd <- hexrows_data(x, ggplot2::aes(fill = cluster), queries = q, logos = FALSE)
+  expect_equal(sum(hd$bins$clones[hd$bins$bin == 0]), 2)
 })

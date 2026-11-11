@@ -20,7 +20,8 @@ hexrows_data(
   row_tag = NULL,
   clones = NULL,
   hits = NULL,
-  unit_in = 0.072
+  unit_in = 0.072,
+  organism = NULL
 )
 }
 \arguments{
@@ -75,6 +76,10 @@ aesthetics are then evaluated on its (already per-clone) columns.}
 
 \item{unit_in}{Inches per hexagon unit, used to place the text (as by
 \code{\link[=ggsave_hexrows]{ggsave_hexrows()}}).}
+
+\item{organism}{\code{"human"} or \code{"mouse"} (tcrdist3 V-gene loop table). By
+default taken from \code{queries} / \code{hits} when they come from
+\code{\link[=top_public]{top_public()}} / \code{\link[=tcrdist_paired]{tcrdist_paired()}} with an organism, else \code{"human"}.}
 }
 \value{
 A list of tibbles: \code{frames}, \code{hexes}, \code{logos}, \code{counts}, \code{labels},

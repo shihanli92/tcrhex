@@ -5,14 +5,18 @@ IMGT-aligned CDR1 / CDR2 / CDR2.5 (pMHC-facing) loops of every V allele. tcrdist
 looks loops up by allele (e.g. "TRAV27*01"); we key by gene and use the *01 allele
 (or the lowest-numbered allele with loops if *01 is absent), recording which.
 
-Usage: python data-raw/make_vloops.py <path/to/alphabeta_gammadelta_db.tsv> inst/extdata/tcrdist_vloops_human.tsv
+Includes the gamma/delta V genes the db files under chains A/B: tcrdist3 looks
+loops up by gene name whatever the chain (e.g. TRDV1 rearranged into TRA).
+
+Usage: python data-raw/make_vloops.py <path/to/alphabeta_gammadelta_db.tsv> inst/extdata/tcrdist_vloops_<organism>.tsv [human|mouse]
 """
 import csv, sys, re
 src, out = sys.argv[1], sys.argv[2]
+organism = sys.argv[3] if len(sys.argv) > 3 else "human"
 rows = {}
 with open(src) as fh:
     for l in csv.DictReader(fh, delimiter="\t"):
-        if l["organism"] != "human" or l["region"] != "V" or l["chain"] not in ("A", "B"):
+        if l["organism"] != organism or l["region"] != "V" or l["chain"] not in ("A", "B"):
             continue
         if not l["cdrs"]:
             continue

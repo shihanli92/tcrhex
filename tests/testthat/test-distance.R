@@ -17,7 +17,7 @@ test_that("hand-checked paired TCRdist cases", {
   expect_equal(h$d_b, 12)
   # V-only difference: loops only (no CDR3 term)
   h <- tcrdist_paired(q1, clone("TRAV27", "CAGAGSQGNLIF", "TRBV6-5", "CASSIRSSYEQYF"), Inf)
-  v <- tcrhex:::.vloop_dist("TRBV19", "TRB")[["TRBV6-5"]]
+  v <- tcrhex:::.vloop_dist("TRBV19")[["TRBV6-5"]]
   expect_equal(h$d_b, v)
   expect_gt(v, 0)
   vt <- vgene_loops()
@@ -41,7 +41,7 @@ test_that("substitution matrix is min(4, 4 - BLOSUM62)", {
   expect_true(isSymmetric(dm))
 })
 
-check_tcrdist3 <- function(file) {
+check_tcrdist3 <- function(file, organism = "human") {
   r <- read.delim(gzfile(file), colClasses = c(rep("character", 8), "integer", "integer"))
   r$q <- paste(r$q_va, r$q_ca, r$q_vb, r$q_cb, sep = ":")
   cl <- unique(r[, c("c_va", "c_ca", "c_vb", "c_cb")])
@@ -49,7 +49,7 @@ check_tcrdist3 <- function(file) {
   cl$.clone_id <- seq_len(nrow(cl))
   r$.clone_id <- match(paste(r$c_va, r$c_ca, r$c_vb, r$c_cb),
                        paste(cl$va, cl$ca, cl$vb, cl$cb))
-  h <- tcrdist_paired(unique(r$q), cl, radius = Inf)
+  h <- tcrdist_paired(unique(r$q), cl, radius = Inf, organism = organism)
   m <- merge(r, h, by.x = c("q", ".clone_id"), by.y = c("query", ".clone_id"),
              suffixes = c(".tcrdist3", ""))
   expect_equal(nrow(m), nrow(r))
@@ -69,6 +69,30 @@ test_that("d_a / d_b match tcrdist3 exactly (synthetic gap stress set)", {
   check_tcrdist3(fx("tcrdist3_syn.tsv.gz"))
 })
 
+test_that("d_a / d_b match tcrdist3 exactly (mouse, synthetic, every mouse TRAV / TRBV)", {
+  check_tcrdist3(fx("tcrdist3_mouse_syn.tsv.gz"), organism = "mouse")
+})
+
+test_that("organism: mouse genes need organism = 'mouse', with a hint", {
+  q <- "TRAV6N-7:CALGPGTGGYKVVF:TRBV1:CTCRTGTGTYEQYF"   # synthetic
+  expect_error(as_queries(q), "use organism = \"mouse\"")
+  expect_equal(as_queries(q, organism = "mouse")$va, "TRAV6N-7")
+  cl <- data.frame(.clone_id = 1:2, donor = "m1", va = c("TRAV6N-7", "TRAV14D-1"),
+                   ca = c("CALGPGTGGYKVVF", "CAARMSNYNVLYF"), vb = c("TRBV1", "TRBV20"),
+                   cb = c("CTCRTGTGTYEQYF", "CGARDRGKSLEEVFF"), cells = 1L)
+  expect_error(tcrdist_paired(as_queries(q, "mouse"), cl, organism = "human"),
+               "use organism")
+  # human query against mouse clones: clones dropped, with the hint
+  expect_warning(tcrdist_paired("TRAV27:CAGAGSQGNLIF:TRBV19:CASSIRSSYEQYF", cl),
+                 "2 of 2 clones dropped.*use organism = \"mouse\"")
+  h <- tcrdist_paired(as_queries(q, "mouse"), cl, radius = Inf, organism = "mouse")
+  expect_equal(h$d[h$.clone_id == 1], 0)
+  expect_equal(attr(h, "organism"), "mouse")
+  # same gene name, different loops in mouse and human
+  expect_false(identical(vgene_loops("human")$cdr25[vgene_loops("human")$gene == "TRAV19"],
+                         vgene_loops("mouse")$cdr25[vgene_loops("mouse")$gene == "TRAV19"]))
+})
+
 test_that("radius filter and unknown V genes", {
   cl <- rbind(clone("TRAV27", "CAGAGSQGNLIF", "TRBV19", "CASSIRSSYEQYF"),
               clone("TRAV27", "CAGAGSQGNLIF", "TRBVX", "CASSIRSSYEQYF"),
@@ -81,7 +105,7 @@ test_that("radius filter and unknown V genes", {
 
 test_that("queries are validated before computing", {
   expect_error(as_queries("TRAV27:CAGAGSQGNLIF:TRBV19"), "must look like")
-  expect_error(as_queries("TRAVX:CAGAGSQGNLIF:TRBV19:CASSIRSSYEQYF"), "unknown TRAV")
+  expect_error(as_queries("TRAVX:CAGAGSQGNLIF:TRBV19:CASSIRSSYEQYF"), "unknown human TRAV")
   expect_error(as_queries("TRAV27:AGAGSQGNLIF:TRBV19:CASS1RSSYEQYF"), "CDR3a .* not")
   q <- as_queries(c(flu = "TRAV27*01:cagagsqgnlif:TRBV19:CASSIRSSYEQYF"))
   expect_equal(q$name, "flu")

@@ -4,12 +4,15 @@
 \alias{as_queries}
 \title{Validate query TCRs}
 \usage{
-as_queries(queries)
+as_queries(queries, organism = c("human", "mouse"))
 }
 \arguments{
 \item{queries}{Character vector \code{"TRAV:CDR3a:TRBV:CDR3b"} (names, if any,
 become query names) or a data frame with \code{va}, \code{ca}, \code{vb}, \code{cb} and
 optionally \code{name}, \code{label}, \code{epitope}, \code{concordance}, \code{rank}, ... (kept).}
+
+\item{organism}{\code{"human"} or \code{"mouse"}: V genes are checked against that
+organism's tcrdist3 loop table.}
 }
 \value{
 A tibble with \code{name}, \code{va}, \code{ca}, \code{vb}, \code{cb} and any extra columns.

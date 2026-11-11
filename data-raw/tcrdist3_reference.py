@@ -1,7 +1,7 @@
 """Compute tcrdist3 reference distances (query x clone, alpha and beta) for the
 tcrhex regression test.
 
-Usage: python data-raw/tcrdist3_reference.py queries.tsv clones.tsv out.tsv
+Usage: python data-raw/tcrdist3_reference.py queries.tsv clones.tsv out.tsv [human|mouse]
 Both inputs: tab-separated with columns id va ca vb cb (V genes without allele;
 '*01' is appended as tcrdist3 expects). Output: qid cid d_a d_b for ALL pairs.
 """
@@ -9,13 +9,15 @@ import sys
 import pandas as pd
 from tcrdist.repertoire import TCRrep
 
+ORG = sys.argv[4] if len(sys.argv) > 4 else "human"
+
 def rep(df):
     cell = pd.DataFrame({
         "count": 1,
         "v_a_gene": df["va"] + "*01", "cdr3_a_aa": df["ca"],
         "v_b_gene": df["vb"] + "*01", "cdr3_b_aa": df["cb"],
         "id": df["id"].astype(str)})
-    return TCRrep(cell_df=cell, organism="human", chains=["alpha", "beta"],
+    return TCRrep(cell_df=cell, organism=ORG, chains=["alpha", "beta"],
                   deduplicate=False, compute_distances=False,
                   db_file="alphabeta_gammadelta_db.tsv")
 

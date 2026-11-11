@@ -16,7 +16,8 @@ Character vector of IMGT gene names.
 Strips allele suffixes (\code{"TRBV19*01"} -> \code{"TRBV19"}), takes the first call
 of a comma-separated list, removes an \code{"HLA-"}-style prefix and restores the
 IMGT slash in the TRAV/DV genes as written by Cell Ranger
-(\code{"TRAV29DV5"} -> \code{"TRAV29/DV5"}). Empty strings, \code{"None"} and \code{"NA"} become
+(\code{"TRAV29DV5"} -> \code{"TRAV29/DV5"}, mouse \code{"TRAV15D-1-DV6D-1"} ->
+\code{"TRAV15D-1/DV6D-1"}). Empty strings, \code{"None"} and \code{"NA"} become
 \code{NA}.
 }
 \examples{

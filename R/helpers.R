@@ -248,7 +248,9 @@ hla_enriched <- function(hits, clones, radius = 24, loci = c("A", "B", "C"),
   }
   h <- hits[hits$d <= radius, , drop = FALSE]
   qn <- if (is.null(queries)) unique(hits$query) else
-    if (is.data.frame(queries)) as_queries(queries)$name else as_queries(queries)$name
+    if (is.data.frame(queries)) {
+      if ("name" %in% names(queries)) queries$name else paste(queries$va, queries$ca, queries$vb, queries$cb, sep = ":")
+    } else if (!is.null(names(queries)) && all(names(queries) != "")) names(queries) else queries
   res <- lapply(qn, function(qq) {
     don <- unique(h$donor[h$query == qq])
     al <- dh$alleles[dh$donor %in% don]

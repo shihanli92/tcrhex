@@ -22,7 +22,8 @@ hexrows(
   hits = NULL,
   title = NULL,
   subtitle = NULL,
-  unit_in = 0.072
+  unit_in = 0.072,
+  organism = NULL
 )
 }
 \arguments{
@@ -80,6 +81,10 @@ change them later with \code{+ labs()}).}
 
 \item{unit_in}{Inches per hexagon unit, used to place the text (as by
 \code{\link[=ggsave_hexrows]{ggsave_hexrows()}}).}
+
+\item{organism}{\code{"human"} or \code{"mouse"} (tcrdist3 V-gene loop table). By
+default taken from \code{queries} / \code{hits} when they come from
+\code{\link[=top_public]{top_public()}} / \code{\link[=tcrdist_paired]{tcrdist_paired()}} with an organism, else \code{"human"}.}
 }
 \value{
 A ggplot object, with the \code{\link[=hexrows_data]{hexrows_data()}}

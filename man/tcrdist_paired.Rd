@@ -4,7 +4,13 @@
 \alias{tcrdist_paired}
 \title{Paired TCRdist from query TCRs to clones}
 \usage{
-tcrdist_paired(queries, clones, radius = 108, verbose = TRUE)
+tcrdist_paired(
+  queries,
+  clones,
+  radius = 108,
+  organism = c("human", "mouse"),
+  verbose = TRUE
+)
 }
 \arguments{
 \item{queries}{Query TCRs: a character vector
@@ -16,6 +22,10 @@ columns \code{va}, \code{ca}, \code{vb}, \code{cb} (and optionally \code{name});
 \code{ca}, \code{vb}, \code{cb}).}
 
 \item{radius}{Keep clones with \code{d <= radius}; \code{Inf} keeps all.}
+
+\item{organism}{\code{"human"} (default) or \code{"mouse"}: which tcrdist3 V-gene
+loop table to use. Mouse distances match tcrdist3's
+\code{TCRrep(organism = "mouse")}.}
 
 \item{verbose}{Report clones dropped for unknown V genes.}
 }

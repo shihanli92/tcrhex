@@ -4,7 +4,7 @@
 \alias{top_public}
 \title{The most public TCRs as queries}
 \usage{
-top_public(cells, n = 20, min_donors = 1)
+top_public(cells, n = 20, min_donors = 1, organism = c("human", "mouse"))
 }
 \arguments{
 \item{cells}{A cell table.}
@@ -12,6 +12,8 @@ top_public(cells, n = 20, min_donors = 1)
 \item{n}{Number of queries.}
 
 \item{min_donors}{Minimum number of donors for a beta.}
+
+\item{organism}{\code{"human"} or \code{"mouse"} (V genes must be in its loop table).}
 }
 \value{
 A query table (see \code{\link[=as_queries]{as_queries()}}) with \code{rank}, \code{donors},
