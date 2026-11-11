@@ -39,13 +39,14 @@ hexrows <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius = 10
                     logo_font = NULL, summarise_fill = summarise_unique,
                     fold_levels = 8, dominant = 0.10, row_tag = NULL,
                     clones = NULL, hits = NULL, title = NULL, subtitle = NULL,
-                    unit_in = 0.072, organism = NULL) {
+                    unit_in = 0.072, organism = NULL, cumulative = FALSE) {
   hd <- hexrows_data(cells, mapping, queries = queries, radius = radius,
                      bin_width = bin_width, max_hex = max_hex, logos = logos,
                      logo_trim = logo_trim, logo_font = logo_font,
                      summarise_fill = summarise_fill, fold_levels = fold_levels,
                      dominant = dominant, row_tag = row_tag, clones = clones,
-                     hits = hits, unit_in = unit_in, organism = organism)
+                     hits = hits, unit_in = unit_in, organism = organism,
+                     cumulative = cumulative)
   hexrows_plot(hd, title = title, subtitle = subtitle)
 }
 
@@ -155,6 +156,9 @@ theme_hexrows <- function(base_size = 8) {
     "when a bin has more, the slots are split over the fill levels by largest remainder ",
     "and the closest clones are shown."), m$max_hex)
   s2 <- "The number below each frame counts all clones in the bin (darker: some not shown)."
+  if (isTRUE(m$cumulative)) {
+    s1 <- paste("Cumulative bins: each frame holds every clone up to its distance.", s1)
+  }
   s3 <- if (isTRUE(m$logos)) sprintf(paste0(
     "Logos: CDR3\u03b1 (upper-left edge) and CDR3\u03b2 (upper-right edge) of the bin's clones, ",
     "%d residue%s trimmed at each end, aligned to the modal length."),

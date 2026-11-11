@@ -104,3 +104,38 @@ test_that("default fill scale: fixed hues in level order, greys for Other / unkn
   lab <- b$plot$scales$get_scales("fill")$get_labels()
   expect_match(lab[1], "\\(\\d+\\)$")
 })
+
+test_that("cumulative mode: bins, logos and counts accumulate with distance", {
+  q <- top_public(cells, 2)
+  a <- hexrows_data(cells, ggplot2::aes(fill = disease), queries = q, max_hex = 5)
+  b <- hexrows_data(cells, ggplot2::aes(fill = disease), queries = q, max_hex = 5,
+                    cumulative = TRUE)
+  expect_true(b$meta$cumulative)
+  # per (row, level): cumulative clones = running sum of the per-bin clones
+  nb <- b$meta$n_bins
+  for (r in unique(a$bins$row)) for (l in levels(a$hits$level)) {
+    per <- vapply(0:(nb - 1), function(k) sum(a$bins$clones[a$bins$row == r & a$bins$bin == k &
+                                                              a$bins$level == l]), 1)
+    cum <- vapply(0:(nb - 1), function(k) sum(b$bins$clones[b$bins$row == r & b$bins$bin == k &
+                                                              b$bins$level == l]), 1)
+    expect_equal(cum, cumsum(per))
+  }
+  # shown = largest-remainder split of the cumulative composition
+  for (k in split(b$bins, paste(b$bins$row, b$bins$bin))) {
+    expect_equal(unname(k$shown), unname(allot(setNames(k$clones, k$level), 5)))
+  }
+  # counts below frames are non-decreasing along each row
+  for (r in unique(b$counts$row)) {
+    expect_false(is.unsorted(as.integer(b$counts$label[b$counts$row == r])))
+  }
+  # each clone appears from its own bin onwards; legend counts each clone once per row
+  expect_true(all(b$hits$bin >= b$hits$own_bin))
+  expect_equal(b$levels, a$levels)
+  # the last bin's logo is built from all clones of the row
+  last <- max(b$hits$bin)
+  r1 <- b$hits[b$hits$row == 1 & b$hits$bin == last, ]
+  expect_equal(nrow(r1), sum(a$hits$row == 1))
+  expect_true(any(grepl("≤", b$labels$label)))
+  p <- hexrows(cells, ggplot2::aes(fill = disease), queries = q, cumulative = TRUE)
+  expect_silent(ggplot2::ggplot_build(p))
+})

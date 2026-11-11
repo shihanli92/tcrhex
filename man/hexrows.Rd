@@ -23,7 +23,8 @@ hexrows(
   title = NULL,
   subtitle = NULL,
   unit_in = 0.072,
-  organism = NULL
+  organism = NULL,
+  cumulative = FALSE
 )
 }
 \arguments{
@@ -85,6 +86,13 @@ change them later with \code{+ labs()}).}
 \item{organism}{\code{"human"} or \code{"mouse"} (tcrdist3 V-gene loop table). By
 default taken from \code{queries} / \code{hits} when they come from
 \code{\link[=top_public]{top_public()}} / \code{\link[=tcrdist_paired]{tcrdist_paired()}} with an organism, else \code{"human"}.}
+
+\item{cumulative}{If \code{TRUE}, bin k holds every clone with \code{d} up to the
+bin's upper edge (bin 0: \code{d == 0}; then \code{d <= 12}, \code{d <= 24}, ...), so
+the hexagon composition, the largest-remainder split, the count and the
+CDR3 logos accumulate as the distance grows. Headers read "0", "<=12",
+"<=24", .... The legend and right-hand counts still count each clone once
+per row.}
 }
 \value{
 A ggplot object, with the \code{\link[=hexrows_data]{hexrows_data()}}

@@ -21,7 +21,8 @@ hexrows_data(
   clones = NULL,
   hits = NULL,
   unit_in = 0.072,
-  organism = NULL
+  organism = NULL,
+  cumulative = FALSE
 )
 }
 \arguments{
@@ -80,11 +81,20 @@ aesthetics are then evaluated on its (already per-clone) columns.}
 \item{organism}{\code{"human"} or \code{"mouse"} (tcrdist3 V-gene loop table). By
 default taken from \code{queries} / \code{hits} when they come from
 \code{\link[=top_public]{top_public()}} / \code{\link[=tcrdist_paired]{tcrdist_paired()}} with an organism, else \code{"human"}.}
+
+\item{cumulative}{If \code{TRUE}, bin k holds every clone with \code{d} up to the
+bin's upper edge (bin 0: \code{d == 0}; then \code{d <= 12}, \code{d <= 24}, ...), so
+the hexagon composition, the largest-remainder split, the count and the
+CDR3 logos accumulate as the distance grows. Headers read "0", "<=12",
+"<=24", .... The legend and right-hand counts still count each clone once
+per row.}
 }
 \value{
 A list of tibbles: \code{frames}, \code{hexes}, \code{logos}, \code{counts}, \code{labels},
 \code{lines}, \code{bins} (the per-bin table: \code{row}, \code{bin}, \code{level}, \code{clones},
-\code{shown}), \code{hits} (every hit with its level, bin and whether it is shown),
+\code{shown}), \code{hits} (every hit with its level, display \code{bin}, its own
+distance bin \code{own_bin} and whether it is shown; with \code{cumulative = TRUE}
+a clone appears in every bin from its own bin onwards),
 \code{rows} (the query table), \code{levels} (level counts), and \code{meta}.
 }
 \description{

@@ -129,6 +129,12 @@ the donors near the query. Map it with
 `aes(fill = hla_carrier(hla, .row_allele))`: every column of the query table
 is available as `.row_<column>`. See the vignette.
 
+### Cumulative bins
+
+`hexrows(..., cumulative = TRUE)` makes each frame hold every clone up to its
+distance (0, ≤12, ≤24, …, ≤108). The hexagon composition, the counts and the
+CDR3 logos then accumulate as the neighbourhood widens.
+
 ### Mouse
 
 Pass `organism = "mouse"`. This uses tcrdist3's mouse V-gene loops, and the

@@ -54,12 +54,20 @@
 #'   aesthetics are then evaluated on its (already per-clone) columns.
 #' @param unit_in Inches per hexagon unit, used to place the text (as by
 #'   [ggsave_hexrows()]).
+#' @param cumulative If `TRUE`, bin k holds every clone with `d` up to the
+#'   bin's upper edge (bin 0: `d == 0`; then `d <= 12`, `d <= 24`, ...), so
+#'   the hexagon composition, the largest-remainder split, the count and the
+#'   CDR3 logos accumulate as the distance grows. Headers read "0", "<=12",
+#'   "<=24", .... The legend and right-hand counts still count each clone once
+#'   per row.
 #' @param organism `"human"` or `"mouse"` (tcrdist3 V-gene loop table). By
 #'   default taken from `queries` / `hits` when they come from
 #'   [top_public()] / [tcrdist_paired()] with an organism, else `"human"`.
 #' @return A list of tibbles: `frames`, `hexes`, `logos`, `counts`, `labels`,
 #'   `lines`, `bins` (the per-bin table: `row`, `bin`, `level`, `clones`,
-#'   `shown`), `hits` (every hit with its level, bin and whether it is shown),
+#'   `shown`), `hits` (every hit with its level, display `bin`, its own
+#'   distance bin `own_bin` and whether it is shown; with `cumulative = TRUE`
+#'   a clone appears in every bin from its own bin onwards),
 #'   `rows` (the query table), `levels` (level counts), and `meta`.
 #' @export
 #' @examples
@@ -71,7 +79,7 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
                          logo_font = NULL, summarise_fill = summarise_unique,
                          fold_levels = 8, dominant = 0.10, row_tag = NULL,
                          clones = NULL, hits = NULL, unit_in = 0.072,
-                         organism = NULL) {
+                         organism = NULL, cumulative = FALSE) {
   organism <- organism %||% attr(queries, "organism") %||% attr(hits, "organism") %||% "human"
   organism <- match.arg(organism, c("human", "mouse"))
   if (is.null(cells)) {
@@ -110,6 +118,16 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
   hits$.level <- lv$value
   plv <- if (is.null(pat_q)) NULL else .make_levels(hits$.pattern_raw, Inf)
   hits$.pattern <- if (is.null(plv)) factor("none") else plv$value
+  hits$.own_bin <- hits$.bin
+  hits_all <- hits   # one row per (row, clone)
+
+  # ---- cumulative: a clone counts in its own bin and every wider one ----
+  if (isTRUE(cumulative) && nrow(hits)) {
+    last <- max(bin_labels(bin_width, radius)$bin)
+    reps <- last - hits$.bin + 1L
+    hits <- hits[rep(seq_len(nrow(hits)), reps), , drop = FALSE]
+    hits$.bin <- as.integer(sequence(reps, from = hits_all$.bin))
+  }
 
   # ---- choose the shown clones per bin ----
   hits <- hits[order(hits$.row, hits$.bin, as.integer(hits$.level), hits$d,
@@ -248,7 +266,7 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
                    label = labs$tag, colour = .hx$muted, size = .hx$size_tag))
   lab_left <- lab_left[!is.na(lab_left$label) & lab_left$label != "", ]
   x_right <- max(bl$bin) * px + Hmax * c30 + 1.6 + 4 * cw(.hx$size_count)
-  rr <- dplyr::summarise(dplyr::group_by(hits, .data$.row), clones = dplyr::n(),
+  rr <- dplyr::summarise(dplyr::group_by(hits_all, .data$.row), clones = dplyr::n(),
                          donors = dplyr::n_distinct(.data$donor), .groups = "drop")
   rr <- dplyr::left_join(tibble::tibble(.row = seq_len(nr)), rr, by = ".row")
   rr$clones[is.na(rr$clones)] <- 0L
@@ -262,28 +280,32 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
   right_w <- max(nchar(lab_right$label)) * cw(.hx$size_label)
   top <- Hmax + (if (logos) logo_out * c30 else 0)
   y_head <- top + 1.2
+  head_lab <- if (isTRUE(cumulative)) ifelse(bl$bin == 0, "0", paste0("\u2264", bl$hi)) else bl$label
+  axis_lab <- if (isTRUE(cumulative)) "cumulative: all clones with paired TCRdist \u2264 the bin edge" else
+    "paired TCRdist to the row's query (bins)"
   header <- dplyr::bind_rows(
-    tibble::tibble(row = 0L, part = "bin", x = bl$bin * px, y = y_head, label = bl$label,
+    tibble::tibble(row = 0L, part = "bin", x = bl$bin * px, y = y_head, label = head_lab,
                    colour = .hx$ink2, size = .hx$size_header),
     tibble::tibble(row = 0L, part = "axis", x = max(bl$bin) * px / 2,
                    y = y_head + lh(.hx$size_header) * 1.3,
-                   label = "paired TCRdist to the row's query (bins)",
+                   label = axis_lab,
                    colour = .hx$muted, size = .hx$size_header))
   labels <- dplyr::bind_rows(lab_left, lab_right, header)
 
   xlim <- c(x_left - 1, x_right + right_w + 1)
   ylim <- c(-(nr - 1) * py - Hmax - 2.2, y_head + lh(.hx$size_header) * 2.2)
-  levels_tab <- dplyr::count(hits, level = .data$.level, name = "clones", .drop = FALSE)
-  pat_tab <- if (is.null(plv)) NULL else dplyr::count(hits, level = .data$.pattern,
+  levels_tab <- dplyr::count(hits_all, level = .data$.level, name = "clones", .drop = FALSE)
+  pat_tab <- if (is.null(plv)) NULL else dplyr::count(hits_all, level = .data$.pattern,
                                                        name = "clones", .drop = FALSE)
   rows <- q
   rows$tag <- labs$tag
   rows$muted <- labs$muted
   hits_out <- hits[, c("query", ".row", ".clone_id", "d", "d_a", "d_b", ".bin",
-                       ".level", ".pattern", ".shown",
+                       ".own_bin", ".level", ".pattern", ".shown",
                        intersect(c("donor", "va", "ca", "vb", "cb", "cells"), names(hits)))]
-  names(hits_out)[names(hits_out) %in% c(".row", ".bin", ".level", ".pattern", ".shown")] <-
-    c("row", "bin", "level", "pattern", "shown")
+  names(hits_out)[names(hits_out) %in% c(".row", ".bin", ".own_bin", ".level", ".pattern",
+                                         ".shown")] <-
+    c("row", "bin", "own_bin", "level", "pattern", "shown")
   structure(list(
     frames = frames, hexes = hexes, logos = logo_df, counts = counts, labels = labels,
     lines = lines, bins = bins, hits = hits_out, rows = rows, levels = levels_tab,
@@ -291,6 +313,7 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
     meta = list(Hmax = Hmax, px = px, py = py, xlim = xlim, ylim = ylim, unit_in = unit_in,
                 radius = radius, bin_width = bin_width, max_hex = max_hex, logos = logos,
                 logo_trim = logo_trim, n_rows = nr, n_bins = nb,
+                cumulative = isTRUE(cumulative),
                 fill_label = if (is.null(fill_q)) NULL else rlang::as_label(fill_q),
                 pattern_label = if (is.null(pat_q)) NULL else rlang::as_label(pat_q),
                 folded = lv$folded, fill_is_factor = lv$is_factor)),
