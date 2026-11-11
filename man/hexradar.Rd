@@ -23,6 +23,7 @@ hexradar(
   organism = NULL,
   donor_noun = "donors",
   centre = c("circle", "box"),
+  ring_gap = NULL,
   title = NULL,
   caption = NULL,
   unit_in = 0.072
@@ -46,6 +47,7 @@ hexradar_data(
   organism = NULL,
   donor_noun = "donors",
   centre = c("circle", "box"),
+  ring_gap = NULL,
   unit_in = 0.072
 )
 }
@@ -106,6 +108,13 @@ default taken from \code{queries} / \code{hits} when they come from
 \item{centre}{Shape of the central query node: \code{"circle"} (default; the
 TCR is stacked as V / CDR3 lines) or \code{"box"} (a rounded box with one line
 per chain).}
+
+\item{ring_gap}{Space between consecutive distance rings, in hexagon units
+(small hexagon radius = 1). \code{NULL} (default): about 7 for 5 bins,
+shrinking to 2.5 when there are many bins, so large radii stay compact.
+Frames are spread evenly around the query for up to 6 bins; with more,
+each frame gets an arc proportional to its size, so empty bins take
+little room.}
 
 \item{title, caption}{Plot title and caption (none by default). The legend
 title reads "\if{html}{\out{<fill>}}: clones within TCRdist \if{html}{\out{<radius>}}"; change it with

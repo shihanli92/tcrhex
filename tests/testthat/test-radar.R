@@ -53,3 +53,22 @@ test_that("hexradar: errors for several queries; options build", {
   ggsave_hexrows(f, p)
   expect_true(file.exists(f))
 })
+
+test_that("hexradar: many 12-wide bins stay compact; empty bins get short labels", {
+  rd <- hexradar_data(cells, ggplot2::aes(fill = disease), query = q1, radius = 240)
+  expect_equal(rd$meta$n_bins, 21)
+  ctr <- dplyr::summarise(dplyr::group_by(rd$frames, .data$bin), x = mean(.data$x),
+                          y = mean(.data$y), H = max(sqrt((.data$x - mean(.data$x))^2 +
+                                                          (.data$y - mean(.data$y))^2)))
+  d <- as.matrix(dist(cbind(ctr$x, ctr$y)))
+  hh <- outer(ctr$H, ctr$H, "+")
+  expect_true(all(d[upper.tri(d)] > hh[upper.tri(hh)]))       # no two frames overlap
+  expect_lt(diff(rd$meta$xlim) * 0.072, 20)                     # page stays reasonable
+  lab_empty <- rd$labels$label[rd$labels$empty]
+  if (length(lab_empty)) expect_true(all(grepl("· none$", lab_empty)))
+  # the ring-label ray avoids every spoke
+  a <- atan2(rd$ring_labels$y[1], rd$ring_labels$x[1])
+  th <- atan2(ctr$y, ctr$x)
+  dd <- abs(((th - a + pi) %% (2 * pi)) - pi)
+  expect_gt(min(dd), 0.05)
+})
