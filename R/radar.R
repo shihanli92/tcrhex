@@ -1,7 +1,7 @@
 #' Paired TCRdist radar for one query
 #'
-#' A compact, single-query version of [hexrows()]: the query sits in a box in
-#' the centre; each paired-TCRdist bin is a hexagonal frame placed on its
+#' A compact, single-query version of [hexrows()]: the query sits in a circle
+#' (or box) in the centre; each paired-TCRdist bin is a hexagonal frame placed on its
 #' dashed distance ring (0, 12, 24, ... up to `radius`), spread evenly around
 #' the query and joined to it by a spoke. Inside each frame, one small hexagon
 #' per clone (up to `max_hex`), coloured by any categorical column, banded by
@@ -18,6 +18,9 @@
 #' @param logos,gene_logos CDR3 logos on the upper edges / V and J gene logos
 #'   on the lower edges of each frame (off by default; frames are small).
 #' @param donor_noun Word used in the labels, e.g. `"people"` or `"mice"`.
+#' @param centre Shape of the central query node: `"circle"` (default; the
+#'   TCR is stacked as V / CDR3 lines) or `"box"` (a rounded box with one line
+#'   per chain).
 #' @param title,caption Plot title and caption (none by default). The legend
 #'   title reads "<fill>: clones within TCRdist <radius>"; change it with
 #'   `+ labs(fill = ...)`.
@@ -32,13 +35,14 @@ hexradar <- function(cells, mapping = ggplot2::aes(), query, radius = 48, bin_wi
                      max_hex = 50, cumulative = FALSE, logos = FALSE, gene_logos = FALSE,
                      logo_trim = 1, summarise_fill = summarise_unique, fold_levels = 8,
                      clones = NULL, hits = NULL, organism = NULL, donor_noun = "donors",
-                     title = NULL, caption = NULL, unit_in = 0.072) {
+                     centre = c("circle", "box"), title = NULL, caption = NULL,
+                     unit_in = 0.072) {
   rd <- hexradar_data(cells, mapping, query = query, radius = radius, bin_width = bin_width,
                       max_hex = max_hex, cumulative = cumulative, logos = logos,
                       gene_logos = gene_logos, logo_trim = logo_trim,
                       summarise_fill = summarise_fill, fold_levels = fold_levels,
                       clones = clones, hits = hits, organism = organism,
-                      donor_noun = donor_noun, unit_in = unit_in)
+                      donor_noun = donor_noun, centre = centre, unit_in = unit_in)
   .hexradar_plot(rd, title = title, caption = caption)
 }
 
@@ -51,7 +55,9 @@ hexradar_data <- function(cells, mapping = ggplot2::aes(), query, radius = 48, b
                           max_hex = 50, cumulative = FALSE, logos = FALSE, gene_logos = FALSE,
                           logo_trim = 1, summarise_fill = summarise_unique, fold_levels = 8,
                           clones = NULL, hits = NULL, organism = NULL,
-                          donor_noun = "donors", unit_in = 0.072) {
+                          donor_noun = "donors", centre = c("circle", "box"),
+                          unit_in = 0.072) {
+  centre <- match.arg(centre)
   organism <- organism %||% attr(query, "organism") %||% attr(hits, "organism") %||% "human"
   q <- as_queries(query, organism = organism)
   if (nrow(q) != 1) {
@@ -77,16 +83,31 @@ hexradar_data <- function(cells, mapping = ggplot2::aes(), query, radius = 48, b
   fr$H <- (vapply(pmax(fr$n_shown, 1L), .patch_extent, 1) + 1 + .hx$pad) / c30
   fr$theta <- pi / 2 - 2 * pi * (fr$bin) / nb          # clockwise from 12 o'clock
 
-  # ---- query box (text in mono) ----
+  # ---- central query node (text in mono) ----
   cw <- function(size) 0.6 * size / 72 / unit_in
   lh <- function(size) 1.3 * size / 72 / unit_in
-  vw <- max(nchar(q$va), nchar(q$vb))
-  box_lines <- c(if (!identical(q$name, paste(q$va, q$ca, q$vb, q$cb, sep = ":"))) q$name else "query",
-                 paste0(formatC(q$va, width = -vw), "  ", q$ca),
-                 paste0(formatC(q$vb, width = -vw), "  ", q$cb))
-  box_w <- max(nchar(box_lines)) * cw(.hx$size_label + 0.5) + 2.4
-  box_h <- length(box_lines) * lh(.hx$size_label + 0.5) + 1.6
-  box_r <- function(th) pmin(box_w / 2 / pmax(abs(cos(th)), 1e-9), box_h / 2 / pmax(abs(sin(th)), 1e-9))
+  fs <- .hx$size_label + 0.5
+  head_line <- if (!identical(q$name, paste(q$va, q$ca, q$vb, q$cb, sep = ":"))) q$name else "query"
+  if (centre == "circle") {
+    # stacked lines: query / V alpha / CDR3 alpha / V beta / CDR3 beta
+    box_lines <- c(head_line, q$va, q$ca, q$vb, q$cb)
+    box_col <- c(.hx$muted, .hx$ink2, .hx$ink, .hx$ink2, .hx$ink)
+    yy <- (rev(seq_along(box_lines)) - (length(box_lines) + 1) / 2) * lh(fs)
+    yy[4:5] <- yy[4:5] - 0.25 * lh(fs)          # small gap between the chains
+        # circle through the corners of every text line, plus padding
+    circ_r <- max(sqrt((nchar(box_lines) * cw(fs) / 2)^2 + (abs(yy) + lh(fs) / 2)^2)) + 0.8
+    box_r <- function(th) rep(circ_r, length(th))
+  } else {
+    vw <- max(nchar(q$va), nchar(q$vb))
+    box_lines <- c(head_line, paste0(formatC(q$va, width = -vw), "  ", q$ca),
+                   paste0(formatC(q$vb, width = -vw), "  ", q$cb))
+    box_col <- c(.hx$muted, .hx$ink, .hx$ink)
+    yy <- (rev(seq_along(box_lines)) - (length(box_lines) + 1) / 2) * lh(fs)
+    box_w <- max(nchar(box_lines)) * cw(fs) + 2.4
+    box_h <- length(box_lines) * lh(fs) + 1.6
+    box_r <- function(th) pmin(box_w / 2 / pmax(abs(cos(th)), 1e-9),
+                               box_h / 2 / pmax(abs(sin(th)), 1e-9))
+  }
 
   # ---- place frames on their rings: r = R0 + edge * s, no overlaps ----
   ext_up <- if (logos) logo_out else 0
@@ -196,9 +217,12 @@ hexradar_data <- function(cells, mapping = ggplot2::aes(), query, radius = 48, b
                                           paste("TCRdist", radius)))
   ring_labels$label <- as.character(ring_labels$label)
   spokes <- tibble::tibble(bin = fr$bin, x = 0, y = 0, xend = fr$x, yend = fr$y)
-  box <- .rounded_rect(0, 0, box_w, box_h, 0.9)
-  box_text <- tibble::tibble(x = 0, y = (rev(seq_along(box_lines)) - (length(box_lines) + 1) / 2) *
-                               lh(.hx$size_label + 0.5), label = box_lines)
+  box <- if (centre == "circle") {
+    tibble::tibble(x = circ_r * cos(tt), y = circ_r * sin(tt))
+  } else {
+    .rounded_rect(0, 0, box_w, box_h, 0.9)
+  }
+  box_text <- tibble::tibble(x = 0, y = yy, label = box_lines, colour = box_col)
 
   # ---- limits ----
   lab_w <- max(nchar(c(lab1, body))) * cw(.hx$size_label)
@@ -218,6 +242,7 @@ hexradar_data <- function(cells, mapping = ggplot2::aes(), query, radius = 48, b
   m$radar <- TRUE
   m$radius <- radius
   m$cumulative <- isTRUE(cumulative)
+  m$centre <- centre
   structure(list(frames = frames, hexes = hexes, logos = logo_df, labels = labels,
                  rings = rings, ring_labels = ring_labels, spokes = spokes, box = box,
                  box_text = box_text, bins = hd$bins, hits = h, levels = hd$levels,
@@ -287,7 +312,7 @@ print.hexradar_data <- function(x, ...) {
     ggplot2::geom_polygon(data = rd$box, ggplot2::aes(x = .data$x, y = .data$y),
                           fill = "white", colour = .hx$frame_line, linewidth = lw(1)) +
     ggplot2::geom_text(data = rd$box_text, ggplot2::aes(x = .data$x, y = .data$y,
-                       label = .data$label), family = "mono", colour = .hx$ink,
+                       label = .data$label, colour = I(.data$colour)), family = "mono",
                        size = (.hx$size_label + 0.5) / ggplot2::.pt) +
     ggplot2::geom_text(data = rd$labels, ggplot2::aes(x = .data$x, y = .data$y,
                        label = .data$label, hjust = .data$hjust, vjust = .data$vjust),

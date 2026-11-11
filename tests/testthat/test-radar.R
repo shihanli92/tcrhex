@@ -14,8 +14,23 @@ test_that("hexradar: one query, frames on their rings, nothing overlaps", {
   expect_equal(r, ring_r, tolerance = 1e-6)                   # frame k sits on ring k
   d <- as.matrix(dist(cbind(ctr$x, ctr$y)))
   for (i in 1:4) for (j in (i + 1):5) expect_gt(d[i, j], ctr$H[i] + ctr$H[j])
-  bw <- diff(range(rd$box$x)); bh <- diff(range(rd$box$y))
-  expect_true(all(abs(ctr$x) - ctr$H * cos(pi / 6) > bw / 2 | abs(ctr$y) - ctr$H > bh / 2))
+  # circle centre (default): frames clear the circle
+  cr <- max(sqrt(rd$box$x^2 + rd$box$y^2))
+  expect_equal(diff(range(sqrt(rd$box$x^2 + rd$box$y^2))), 0, tolerance = 1e-9)
+  expect_true(all(r - ctr$H > cr))
+  expect_equal(rd$box_text$label, c("query", "TRAV27", "CAGAGSQGNLIF", "TRBV6-5", "CASSYSGGSYEQYF"))
+  # the circle holds every text line (mono width estimate)
+  cw <- 0.6 * 7.5 / 72 / 0.072
+  lh <- 1.3 * 7.5 / 72 / 0.072
+  corner <- sqrt((nchar(rd$box_text$label) * cw / 2)^2 + (abs(rd$box_text$y) + lh / 2)^2)
+  expect_true(all(corner < cr))
+  # box option keeps the rounded rectangle, one line per chain
+  rb <- hexradar_data(cells, ggplot2::aes(fill = disease), query = q1, centre = "box")
+  expect_length(rb$box_text$label, 3)
+  bw <- diff(range(rb$box$x)); bh <- diff(range(rb$box$y))
+  cb <- dplyr::summarise(dplyr::group_by(rb$frames, .data$bin), x = mean(.data$x), y = mean(.data$y),
+                         H = max(sqrt((.data$x - mean(.data$x))^2 + (.data$y - mean(.data$y))^2)))
+  expect_true(all(abs(cb$x) - cb$H * cos(pi / 6) > bw / 2 | abs(cb$y) - cb$H > bh / 2))
   # bins / shown follow the row rules
   per <- aggregate(cbind(clones, shown) ~ bin, data = rd$bins, FUN = sum)
   expect_true(all(per$shown == pmin(per$clones, 50)))

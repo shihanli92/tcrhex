@@ -22,6 +22,7 @@ hexradar(
   hits = NULL,
   organism = NULL,
   donor_noun = "donors",
+  centre = c("circle", "box"),
   title = NULL,
   caption = NULL,
   unit_in = 0.072
@@ -44,6 +45,7 @@ hexradar_data(
   hits = NULL,
   organism = NULL,
   donor_noun = "donors",
+  centre = c("circle", "box"),
   unit_in = 0.072
 )
 }
@@ -101,6 +103,10 @@ default taken from \code{queries} / \code{hits} when they come from
 
 \item{donor_noun}{Word used in the labels, e.g. \code{"people"} or \code{"mice"}.}
 
+\item{centre}{Shape of the central query node: \code{"circle"} (default; the
+TCR is stacked as V / CDR3 lines) or \code{"box"} (a rounded box with one line
+per chain).}
+
 \item{title, caption}{Plot title and caption (none by default). The legend
 title reads "\if{html}{\out{<fill>}}: clones within TCRdist \if{html}{\out{<radius>}}"; change it with
 \code{+ labs(fill = ...)}.}
@@ -117,8 +123,8 @@ A ggplot object, with the data attached as \code{attr(p, "hexrows")}
 \code{hits}, \code{levels}) and \code{meta}.
 }
 \description{
-A compact, single-query version of \code{\link[=hexrows]{hexrows()}}: the query sits in a box in
-the centre; each paired-TCRdist bin is a hexagonal frame placed on its
+A compact, single-query version of \code{\link[=hexrows]{hexrows()}}: the query sits in a circle
+(or box) in the centre; each paired-TCRdist bin is a hexagonal frame placed on its
 dashed distance ring (0, 12, 24, ... up to \code{radius}), spread evenly around
 the query and joined to it by a spoke. Inside each frame, one small hexagon
 per clone (up to \code{max_hex}), coloured by any categorical column, banded by

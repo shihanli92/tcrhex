@@ -147,11 +147,12 @@ hexradar(cells, aes(fill = hla_carrier(hla, "A*02")),
          query = "TRAV27:CAGAGSQGNLIF:TRBV6-5:CASSYSGGSYEQYF")   # or top_expanded(cells, 1)
 ```
 
-The query sits in the centre. Each distance bin is a frame on its dashed
+The query sits in a circle in the centre (`centre = "box"` for a rounded box). Each distance bin is a frame on its dashed
 TCRdist ring (0, 12, 24, …, `radius = 48` by default), joined to the query by
 a spoke and labelled "TCRdist 1–12 · 125 clones · 95 donors · 50 shown". Fill,
-patterns, scales, `cumulative`, `logos` and `gene_logos` work as in
-`hexrows()`. Use `donor_noun = "people"` (or `"mice"`) to change the label
+patterns, scales, `logos` and `gene_logos` work as in `hexrows()`.
+`cumulative = TRUE` makes each frame hold every clone up to its ring
+("TCRdist ≤ 24"). Use `donor_noun = "people"` (or `"mice"`) to change the label
 wording.
 
 ![](man/figures/ex5_synthetic_radar.png)
