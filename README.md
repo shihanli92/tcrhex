@@ -140,6 +140,22 @@ hexrows(cells, aes(fill = tissue), queries = q)
 tagged with its group and cell count. Without `by`, it picks the n most
 expanded clones overall.
 
+### One clone, compact: `hexradar()`
+
+```r
+hexradar(cells, aes(fill = hla_carrier(hla, "A*02")),
+         query = "TRAV27:CAGAGSQGNLIF:TRBV6-5:CASSYSGGSYEQYF")   # or top_expanded(cells, 1)
+```
+
+The query sits in the centre. Each distance bin is a frame on its dashed
+TCRdist ring (0, 12, 24, …, `radius = 48` by default), joined to the query by
+a spoke and labelled "TCRdist 1–12 · 125 clones · 95 donors · 50 shown". Fill,
+patterns, scales, `cumulative`, `logos` and `gene_logos` work as in
+`hexrows()`. Use `donor_noun = "people"` (or `"mice"`) to change the label
+wording.
+
+![](man/figures/ex5_synthetic_radar.png)
+
 ### Gene-usage logos
 
 `hexrows(..., gene_logos = TRUE)` adds V and J gene logos on the two lower
@@ -186,6 +202,7 @@ The organism set in `top_public()` (or `tcrdist_paired()`) carries over to
 | `top_public()` | the n beta chains in most donors, each with its dominant alpha and concordance |
 | `top_expanded()` | the n clones with most cells, overall or per level of any column (`by = tissue`) |
 | `hexrows()` / `hexrows_data()` | the figure / the tidy data behind it (incl. the per-bin table) |
+| `hexradar()` / `hexradar_data()` | compact single-query version: bins as frames on TCRdist rings around the query |
 | `tissue_class()`, `summarise_tissue()`, `scale_fill_tissue()`, `scale_pattern_tissue()` | tissue compartments |
 | `hla_carrier()`, `hla_enriched()` | HLA carrier status, per-row enriched allele |
 | `ggsave_hexrows()` | saves with a page sized to rows × bins (0.072 in per hexagon unit) |

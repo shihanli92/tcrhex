@@ -342,7 +342,8 @@ hexrows_data <- function(cells, mapping = ggplot2::aes(), queries = NULL, radius
   rows$muted <- labs$muted
   hits_out <- hits[, c("query", ".row", ".clone_id", "d", "d_a", "d_b", ".bin",
                        ".own_bin", ".level", ".pattern", ".shown",
-                       intersect(c("donor", "va", "ca", "vb", "cb", "cells"), names(hits)))]
+                       intersect(c("donor", "va", "ca", "vb", "cb", "ja", "jb", "cells"),
+                                 names(hits)))]
   names(hits_out)[names(hits_out) %in% c(".row", ".bin", ".own_bin", ".level", ".pattern",
                                          ".shown")] <-
     c("row", "bin", "own_bin", "level", "pattern", "shown")

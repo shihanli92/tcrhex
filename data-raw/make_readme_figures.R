@@ -26,3 +26,9 @@ p <- hexrows(cells, aes(fill = tissue_class(tissue), pattern = tissue_class(tiss
              title = "SYNTHETIC example data: tissue classes") +
   scale_fill_tissue() + scale_pattern_tissue()
 ggsave_hexrows("man/figures/ex3_synthetic_tissue.png", p, dpi = 110)
+q1 <- top_public(cells, 1)
+p <- hexradar(cells, aes(fill = hla_carrier(hla, "A*02")), query = q1, donor_noun = "people",
+              title = "SYNTHETIC example data: hexradar()") +
+  scale_fill_manual(values = c(carrier = "#2a78d6", "non-carrier" = "#b4b3ac",
+                               "not typed" = "#e4e3dc"))
+ggsave_hexrows("man/figures/ex5_synthetic_radar.png", p, dpi = 110)
